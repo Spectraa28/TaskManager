@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: taskmanager
+
+  datasource:
+    url: jdbc:h2:mem:taskmanagerdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+
+app:
+  jwt:
+    secret: your-super-secret-key-at-least-256-bits-long-replace-this
+    expiration: 86400000
