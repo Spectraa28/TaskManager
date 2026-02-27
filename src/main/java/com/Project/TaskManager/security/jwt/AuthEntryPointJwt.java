@@ -13,12 +13,16 @@ import com.Project.TaskManager.payload.response.ApiResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class AuthEntryPointJwt implements AuthenticationEntryPoint{
+
+        private final ObjectMapper objectMapper;
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
@@ -35,9 +39,8 @@ public class AuthEntryPointJwt implements AuthenticationEntryPoint{
             "Unauthorized: "+ authException.getMessage()
         );
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.findAndRegisterModules();
-        mapper.writeValue(response.getOutputStream(), apiResponse);
+       
+        objectMapper.writeValue(response.getOutputStream(), apiResponse);
 
     }
 

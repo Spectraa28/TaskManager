@@ -86,12 +86,12 @@ src/main/java/com/project/taskmanager/
 - [x] All domain enums defined
 
 ### 🔐 Auth & Security
-- [ ] JWT Access Token (short lived — 24hr)
+- [x] JWT Access Token (short lived — 24hr)
 - [ ] Refresh Token System (7 days, DB stored, revocable)
-- [ ] Role-based access control (scoped per workspace)
+- [x] Role-based access control (scoped per workspace)
 - [ ] AOP permission checks via `@RequiresRole` annotation
 - [ ] Rate limiting per user via Redis
-- [ ] API versioning (`/api/v1/`)
+- [x] API versioning (`/api/v1/`)
 
 ### 🏢 Workspace & Projects
 - [ ] Workspace CRUD + member management
@@ -217,6 +217,8 @@ Password  : (leave blank)
 | Day | What was built |
 |---|---|
 | Day 1 | Project setup, enums, BaseEntity, ApiResponse, GlobalExceptionHandler, AppConstants |
+| Day 2 | Full JWT security layer — `JwtUtils` (generate/validate tokens), `AuthTokenFilter` (intercepts every request), `AuthEntryPointJwt` (clean 401 responses), `UserDetailsImpl`, `UserDetailsServiceImpl`, `WebSecurityConfig` (stateless, route rules, BCrypt) |
+| Day 3 | `User` entity, `UserRepository`, request DTOs (`RegisterRequest`, `LoginRequest`), `AuthResponse` DTO, `AuthService` interface + `AuthServiceImpl`, `AuthController` — register and login APIs fully working and tested in Postman |
 
 ---
 
