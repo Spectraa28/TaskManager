@@ -1,11 +1,12 @@
 # TaskFlow 🚀
 
-> A production-grade, real-time collaborative task management system  
+> A production-grade, AI-powered real-time collaborative task management system  
 > built with Spring Boot — inspired by Jira. Built in public over 20 days.
 
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.3-green)
+![AI](https://img.shields.io/badge/AI-Google%20Gemini-blue)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ---
@@ -13,14 +14,16 @@
 ## 🧠 About
 
 TaskFlow is a backend-heavy REST API for managing teams, projects,
-sprints and tasks collaboratively in real time.
+sprints and tasks collaboratively in real time — now with AI-powered
+features powered by Google Gemini.
 
 Built to demonstrate production-grade Spring Boot architecture —
 JWT security with refresh tokens, WebSockets, async messaging via
 RabbitMQ, role-based access control scoped per workspace, AOP-based
-permission checks, rate limiting, scheduled jobs and more.
+permission checks, rate limiting, scheduled jobs, and intelligent
+AI automation.
 
-> 🚧 Actively building in public — Day 1 of 20 complete.
+> 🚧 Actively building in public — Day 3 of 20 complete.
 
 ---
 
@@ -37,6 +40,7 @@ permission checks, rate limiting, scheduled jobs and more.
 | Real-time | WebSockets + STOMP *(coming soon)* |
 | Storage | AWS S3 *(coming soon)* |
 | Scheduling | Spring Scheduler *(coming soon)* |
+| AI | Google Gemini API *(coming soon)* |
 | Build Tool | Maven |
 | Deployment | Docker + Railway *(coming soon)* |
 
@@ -45,7 +49,7 @@ permission checks, rate limiting, scheduled jobs and more.
 ## 🏗️ Architecture
 ```
 src/main/java/com/project/taskmanager/
-├── config/          → Security config, constants
+├── config/          → Security config, Jackson, constants
 ├── controller/      → REST controllers (/api/v1/)
 ├── service/         → Business logic + interfaces
 ├── repository/      → JPA repositories
@@ -58,6 +62,7 @@ src/main/java/com/project/taskmanager/
 ├── enums/           → Domain enums
 ├── aop/             → @RequiresRole + audit aspect
 ├── scheduler/       → Scheduled jobs
+├── ai/              → Gemini integration + AI services
 └── util/            → Utility classes
 ```
 
@@ -87,11 +92,11 @@ src/main/java/com/project/taskmanager/
 
 ### 🔐 Auth & Security
 - [x] JWT Access Token (short lived — 24hr)
-- [ ] Refresh Token System (7 days, DB stored, revocable)
 - [x] Role-based access control (scoped per workspace)
+- [x] API versioning (`/api/v1/`)
+- [ ] Refresh Token System (7 days, DB stored, revocable)
 - [ ] AOP permission checks via `@RequiresRole` annotation
 - [ ] Rate limiting per user via Redis
-- [x] API versioning (`/api/v1/`)
 
 ### 🏢 Workspace & Projects
 - [ ] Workspace CRUD + member management
@@ -113,6 +118,14 @@ src/main/java/com/project/taskmanager/
 - [ ] File attachments via AWS S3
 - [ ] Task activity feed (full change history)
 
+### 🤖 AI Features (Google Gemini)
+- [ ] Auto task categorization (type + priority detection)
+- [ ] Smart task description generator
+- [ ] Sprint planning assistant
+- [ ] Task assignment suggestions
+- [ ] Daily standup summary generator
+- [ ] Overdue risk prediction
+
 ### 🔔 Real-time & Notifications
 - [ ] WebSocket live task updates (STOMP)
 - [ ] RabbitMQ async notification system
@@ -132,6 +145,34 @@ src/main/java/com/project/taskmanager/
 - [ ] Audit logging via Spring AOP
 - [ ] Docker + PostgreSQL setup
 - [ ] Deployed on Railway
+
+---
+
+## 🤖 AI Features Detail
+
+TaskFlow integrates **Google Gemini API** for intelligent automation:
+
+### Auto Task Categorization
+```
+Input:  "Login button not working on mobile safari"
+Output: Type: BUG, Priority: HIGH — auto assigned
+```
+
+### Smart Description Generator
+```
+Input:  "fix login bug"
+Output: Structured description with steps to reproduce,
+        expected behavior, and acceptance criteria
+```
+
+### Daily Standup Summary
+```
+Reads last 24hrs of activity → generates:
+- What was completed
+- What is in progress
+- Current blockers
+- Sprint health status
+```
 
 ---
 
@@ -172,6 +213,13 @@ Tasks         POST   /api/v1/sprints/{id}/tasks
 Comments      POST   /api/v1/tasks/{id}/comments
               DELETE /api/v1/tasks/{id}/comments/{commentId}
 
+AI            POST   /api/v1/ai/categorize-task
+              POST   /api/v1/ai/generate-description
+              POST   /api/v1/ai/sprint-suggestions
+              POST   /api/v1/ai/assignment-suggestion
+              GET    /api/v1/ai/standup-summary/{projectId}
+              GET    /api/v1/ai/overdue-risk/{sprintId}
+
 Search        GET    /api/v1/search?q=keyword&type=task,project
 
 Notifications GET    /api/v1/notifications
@@ -183,16 +231,31 @@ Dashboard     GET    /api/v1/projects/{id}/dashboard
 
 ---
 
+## 📁 API Response Structure
+
+Every endpoint returns a consistent response envelope:
+```json
+{
+  "success": true,
+  "message": "Task created successfully",
+  "data": {},
+  "timestamp": "2026-02-27T12:00:00"
+}
+```
+
+---
+
 ## 🚀 Running Locally
 
 ### Prerequisites
 - Java 25
 - Maven
+- Google Gemini API Key (free at [ai.google.dev](https://ai.google.dev))
 
 ### Steps
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/taskflow.git
+git clone https://github.com/Spectraa28/taskflow.git
 
 # Navigate into project
 cd taskflow
@@ -216,14 +279,24 @@ Password  : (leave blank)
 
 | Day | What was built |
 |---|---|
-| Day 1 | Project setup, enums, BaseEntity, ApiResponse, GlobalExceptionHandler, AppConstants |
-| Day 2 | Full JWT security layer — `JwtUtils` (generate/validate tokens), `AuthTokenFilter` (intercepts every request), `AuthEntryPointJwt` (clean 401 responses), `UserDetailsImpl`, `UserDetailsServiceImpl`, `WebSecurityConfig` (stateless, route rules, BCrypt) |
-| Day 3 | `User` entity, `UserRepository`, request DTOs (`RegisterRequest`, `LoginRequest`), `AuthResponse` DTO, `AuthService` interface + `AuthServiceImpl`, `AuthController` — register and login APIs fully working and tested in Postman |
+| Day 1 | Project setup, package structure, `application.yml`, all 6 domain enums, `BaseEntity` with UUID primary keys, `ApiResponse<T>` wrapper, `GlobalExceptionHandler` with custom exceptions, `AppConstants` |
+| Day 2 | Full JWT security layer — `JwtUtils`, `AuthTokenFilter`, `AuthEntryPointJwt`, `UserDetailsImpl`, `UserDetailsServiceImpl`, `WebSecurityConfig` — stateless, BCrypt, route rules |
+| Day 3 | `User` entity, `UserRepository`, `RegisterRequest`, `LoginRequest`, `AuthResponse`, `AuthService` + `AuthServiceImpl`, `AuthController` — register and login fully tested in Postman |
+
+---
+
+## 🗺️ Roadmap
+
+### Phase 1 — Monolith (Days 1-20)
+Production-grade Spring Boot backend with AI features, deployed on Railway.
+
+### Phase 2 — Microservices (Days 21-35)
+Migration using Spring Cloud Gateway, Eureka, OpenFeign, Resilience4j and Kubernetes.
 
 ---
 
 ## 👨‍💻 Author
 
-Built by Sonu Verma(https://github.com/Spectraa28)
+Built by [Sonu Verma](https://github.com/Spectraa28)
 
 > If you find this helpful, drop a ⭐ on the repo!
