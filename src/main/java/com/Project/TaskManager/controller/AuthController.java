@@ -1,6 +1,5 @@
 package com.Project.TaskManager.controller;
 
-import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,7 +29,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
         @Valid @RequestBody RegisterRequest request
-    ) throws BadRequestException{
+    ){
         AuthResponse response = authService.register(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -40,7 +39,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
         @Valid @RequestBody LoginRequest request
-    ) throws BadRequestException{
+    ){
 
         AuthResponse response = authService.login(request);
         return ResponseEntity
