@@ -29,3 +29,4 @@ app:
   jwt:
     secret: c3ByaW5nYm9vdDQtdGFza2Zsb3ctand0LXNlY3JldC1rZXktMjAyNi1wcm9kdWN0aW9uLWdyYWRl
     expiration: 86400000
+    refresh-expiration: 604800000

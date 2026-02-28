@@ -40,7 +40,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
         @Valid @RequestBody LoginRequest request
-    ){
+    ) throws BadRequestException{
 
         AuthResponse response = authService.login(request);
         return ResponseEntity
@@ -50,7 +50,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(
-            @RequestHeader("Refresh-Token") String refreshToken) {
+            @RequestHeader("Refresh-Token") String refreshToken){
 
         AuthResponse response = authService.refreshToken(refreshToken);
         return ResponseEntity

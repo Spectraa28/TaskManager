@@ -282,6 +282,10 @@ Password  : (leave blank)
 | Day 1 | Project setup, package structure, `application.yml`, all 6 domain enums, `BaseEntity` with UUID primary keys, `ApiResponse<T>` wrapper, `GlobalExceptionHandler` with custom exceptions, `AppConstants` |
 | Day 2 | Full JWT security layer — `JwtUtils`, `AuthTokenFilter`, `AuthEntryPointJwt`, `UserDetailsImpl`, `UserDetailsServiceImpl`, `WebSecurityConfig` — stateless, BCrypt, route rules |
 | Day 3 | `User` entity, `UserRepository`, `RegisterRequest`, `LoginRequest`, `AuthResponse`, `AuthService` + `AuthServiceImpl`, `AuthController` — register and login fully tested in Postman |
+| Day 4 | RefreshToken entity, RefreshTokenService, 
+          token rotation, revocation, full auth 
+          flow tested in Postman |
+
 
 ---
 

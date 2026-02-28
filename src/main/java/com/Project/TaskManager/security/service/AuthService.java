@@ -1,6 +1,6 @@
 package com.Project.TaskManager.security.service;
 
-import org.apache.coyote.BadRequestException;
+
 
 import com.Project.TaskManager.payload.request.LoginRequest;
 import com.Project.TaskManager.payload.request.RegisterRequest;
@@ -8,7 +8,7 @@ import com.Project.TaskManager.payload.response.AuthResponse;
 
 public interface AuthService{
 
-    AuthResponse register(RegisterRequest request) throws BadRequestException;
+    AuthResponse register(RegisterRequest request) ;
 
      AuthResponse login(LoginRequest request);
 
