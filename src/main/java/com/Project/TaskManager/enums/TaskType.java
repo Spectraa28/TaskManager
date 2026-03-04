@@ -1,6 +1,5 @@
 package com.Project.TaskManager.enums;
 
 public enum TaskType {
-    BUG, FEATURE, STORY, IMPROVEMENT
-    
+TASK, BUG, STORY, IMPROVEMENT, FEATURE    
 }
