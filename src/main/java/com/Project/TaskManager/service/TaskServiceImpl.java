@@ -42,6 +42,7 @@ public class TaskServiceImpl implements TaskService{
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
 
 
@@ -102,6 +103,13 @@ public class TaskServiceImpl implements TaskService{
                 .build();
 
         Task saved = taskRepository.save(task);
+
+        activityLogService.log(
+        saved,
+        reporter,
+        "TASK_CREATED",
+        reporter.getFullName() + " created task " + saved.getTaskKey());
+
 
         log.info("Task '{}' created in project '{}' by '{}'",
                 taskKey, project.getKey(), reporter.getEmail());
@@ -182,6 +190,12 @@ public class TaskServiceImpl implements TaskService{
 
         Task updated = taskRepository.save(task);
 
+        activityLogService.log(
+        updated,
+        getUserById(currentUser.getId()),
+        "TASK_UPDATED",
+        currentUser.getEmail() + " updated task " + updated.getTaskKey());
+
         log.info("Task '{}' updated by '{}'",
                 updated.getTaskKey(), currentUser.getEmail());
 
@@ -205,6 +219,12 @@ public class TaskServiceImpl implements TaskService{
 
         taskRepository.delete(task);
 
+        activityLogService.log(
+        task,
+        getUserById(currentUser.getId()),
+        "TASK_DELETED",
+        currentUser.getEmail() + " deleted task " + task.getTaskKey());
+
         log.info("Task '{}' deleted by '{}'",
                 task.getTaskKey(), currentUser.getEmail());
     }
@@ -226,8 +246,29 @@ public class TaskServiceImpl implements TaskService{
         // Validate status transition is legal
         validateStatusTransition(task.getStatus(), newStatus);
 
+
+        TaskStatus oldStatus = task.getStatus();
+
         task.setStatus(newStatus);
         Task updated = taskRepository.save(task);
+
+        activityLogService.log(
+        updated,
+        getUserById(currentUser.getId()),
+        "STATUS_CHANGED",
+        currentUser.getEmail() + " changed status of " + task.getTaskKey()
+                + " from " + oldStatus + " to " + newStatus,
+        oldStatus.name(),
+        newStatus.name());
+
+        activityLogService.log(
+        updated,
+        getUserById(currentUser.getId()),
+        "STATUS_CHANGED",
+        currentUser.getEmail() + " changed status of " + task.getTaskKey()
+                + " from " + task.getStatus() + " to " + newStatus,
+        task.getStatus().name(),
+        newStatus.name());
 
         log.info("Task '{}' status changed from '{}' to '{}' by '{}'",
                 task.getTaskKey(), task.getStatus(),
