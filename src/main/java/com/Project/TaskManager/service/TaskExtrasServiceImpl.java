@@ -30,6 +30,7 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
     private final TimeLogRepository timeLogRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     // ─── Comments ───────────────────────────────────────────────────────────
 
@@ -51,6 +52,12 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
                 .build();
 
         Comment saved = commentRepository.save(comment);
+
+        activityLogService.log(
+        task,
+        author,
+        "COMMENT_ADDED",
+        author.getFullName() + " commented on " + task.getTaskKey());
 
         log.info("Comment added on task '{}' by '{}'",
                 task.getTaskKey(), author.getEmail());
@@ -103,6 +110,12 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
         }
 
         commentRepository.delete(comment);
+
+        activityLogService.log(
+        task,
+        getUserById(currentUser.getId()),
+        "COMMENT_DELETED",
+        currentUser.getEmail() + " deleted a comment on " + task.getTaskKey());
 
         log.info("Comment '{}' deleted by '{}'",
                 commentId, currentUser.getEmail());
@@ -177,6 +190,14 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
                 .build();
 
         TimeLog saved = timeLogRepository.save(timeLog);
+
+        activityLogService.log(
+        task,
+        user,
+        "TIME_LOGGED",
+        user.getFullName() + " logged " + request.getMinutesSpent()
+                + " minutes on " + task.getTaskKey());
+
 
         log.info("User '{}' logged {} minutes on task '{}'",
                 user.getEmail(), request.getMinutesSpent(), task.getTaskKey());
@@ -255,4 +276,6 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
                 .map(m -> m.getRole().name().equals("ADMIN"))
                 .orElse(false);
     }
+
+    
 }
