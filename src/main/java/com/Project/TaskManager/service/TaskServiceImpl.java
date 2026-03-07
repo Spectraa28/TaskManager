@@ -25,6 +25,7 @@ import com.Project.TaskManager.repository.TaskRepository;
 import com.Project.TaskManager.repository.UserRepository;
 import com.Project.TaskManager.repository.WorkspaceMemberRepository;
 import com.Project.TaskManager.repository.WorkspaceRepository;
+import com.Project.TaskManager.security.RequiresWorkspaceRole;
 import com.Project.TaskManager.security.service.UserDetailsImpl;
 
 import jakarta.transaction.Transactional;
@@ -46,6 +47,7 @@ public class TaskServiceImpl implements TaskService{
 
 
 
+    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
     @Override
     @Transactional
     public TaskResponse createTask(UserDetailsImpl currentUser,
@@ -55,7 +57,6 @@ public class TaskServiceImpl implements TaskService{
         Project project = getProjectById(projectId);
 
         // Any workspace member can create a task
-        validateWorkspaceMembership(currentUser, project.getWorkspace());
 
         User reporter = getUserById(currentUser.getId());
 
@@ -84,7 +85,6 @@ public class TaskServiceImpl implements TaskService{
             assignee = getUserById(request.getAssigneeId());
 
             // Assignee must be a member of the workspace
-            validateUserIsWorkspaceMember(assignee, project.getWorkspace());
         }
 
         Task task = Task.builder()
@@ -119,6 +119,7 @@ public class TaskServiceImpl implements TaskService{
 
     // ─── Read ───────────────────────────────────────────────────────────────
 
+    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
     @Override
     @Transactional
     public Page<TaskResponse> getTasksByProject(UserDetailsImpl currentUser,
@@ -126,12 +127,12 @@ public class TaskServiceImpl implements TaskService{
                                                 Pageable pageable) {
 
         Project project = getProjectById(projectId);
-        validateWorkspaceMembership(currentUser, project.getWorkspace());
 
         return taskRepository.findAllByProject(project, pageable)
                 .map(TaskResponse::from);
     }
 
+    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
     @Override
     @Transactional
     public TaskResponse getTaskById(UserDetailsImpl currentUser,
@@ -139,7 +140,6 @@ public class TaskServiceImpl implements TaskService{
                                     UUID taskId) {
 
         Project project = getProjectById(projectId);
-        validateWorkspaceMembership(currentUser, project.getWorkspace());
 
         Task task = getTaskByIdAndProject(taskId, project);
 
@@ -148,6 +148,7 @@ public class TaskServiceImpl implements TaskService{
 
     // ─── Update ─────────────────────────────────────────────────────────────
 
+    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
     @Override
     @Transactional
     public TaskResponse updateTask(UserDetailsImpl currentUser,
@@ -156,7 +157,6 @@ public class TaskServiceImpl implements TaskService{
                                    CreateTaskRequest request) {
 
         Project project = getProjectById(projectId);
-        validateWorkspaceMembership(currentUser, project.getWorkspace());
 
         Task task = getTaskByIdAndProject(taskId, project);
 
@@ -177,7 +177,6 @@ public class TaskServiceImpl implements TaskService{
         User assignee = null;
         if (request.getAssigneeId() != null) {
             assignee = getUserById(request.getAssigneeId());
-            validateUserIsWorkspaceMember(assignee, project.getWorkspace());
         }
 
         task.setTitle(request.getTitle());
@@ -204,6 +203,7 @@ public class TaskServiceImpl implements TaskService{
 
     // ─── Delete ─────────────────────────────────────────────────────────────
 
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER) 
     @Override
     @Transactional
     public void deleteTask(UserDetailsImpl currentUser,
@@ -213,7 +213,6 @@ public class TaskServiceImpl implements TaskService{
         Project project = getProjectById(projectId);
 
         // Only ADMIN or MANAGER can delete tasks
-        validateAdminOrManagerRole(currentUser, project.getWorkspace());
 
         Task task = getTaskByIdAndProject(taskId, project);
 
@@ -231,6 +230,7 @@ public class TaskServiceImpl implements TaskService{
 
     // ─── Status Transition ──────────────────────────────────────────────────
 
+    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
     @Override
     @Transactional
     public TaskResponse updateTaskStatus(UserDetailsImpl currentUser,
@@ -239,7 +239,6 @@ public class TaskServiceImpl implements TaskService{
                                          TaskStatus newStatus) {
 
         Project project = getProjectById(projectId);
-        validateWorkspaceMembership(currentUser, project.getWorkspace());
 
         Task task = getTaskByIdAndProject(taskId, project);
 
@@ -323,71 +322,7 @@ public class TaskServiceImpl implements TaskService{
         }
     }
 
-    private void validateWorkspaceMembership(UserDetailsImpl currentUser,
-                                             Workspace workspace) {
-
-        boolean isOwner = workspace.getOwner().getId()
-                .equals(currentUser.getId());
-
-        if (isOwner) return;
-
-        User user = getUserById(currentUser.getId());
-
-        boolean isMember = workspaceMemberRepository
-                .existsByWorkspaceAndUser(workspace, user);
-
-        if (!isMember) {
-            throw new UnauthorizedException(
-                    "You are not a member of this workspace");
-        }
-    }
-
-    private void validateUserIsWorkspaceMember(User user,
-                                               Workspace workspace) {
-
-        boolean isOwner = workspace.getOwner().getId()
-                .equals(user.getId());
-
-        if (isOwner) return;
-
-        boolean isMember = workspaceMemberRepository
-                .existsByWorkspaceAndUser(workspace, user);
-
-        if (!isMember) {
-            throw new BadRequestException(
-                    "Assignee is not a member of this workspace");
-        }
-    }
-
-    private void validateAdminOrManagerRole(UserDetailsImpl currentUser,
-                                            Workspace workspace) {
-
-        boolean isOwner = workspace.getOwner().getId()
-                .equals(currentUser.getId());
-
-        if (isOwner) return;
-
-        User user = getUserById(currentUser.getId());
-
-        WorkspaceRole role = workspaceMemberRepository
-                .findByWorkspaceAndUser(workspace, user)
-                .map(WorkspaceMember::getRole)
-                .orElseThrow(() -> new UnauthorizedException(
-                        "You are not a member of this workspace"));
-
-        if (role != WorkspaceRole.ADMIN && role != WorkspaceRole.MANAGER) {
-            throw new UnauthorizedException(
-                    "Only ADMIN or MANAGER can perform this action");
-        }
-    }
-
-
-
-
-
-
-
-
+   
 
 
 }

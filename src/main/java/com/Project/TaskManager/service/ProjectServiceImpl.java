@@ -23,6 +23,7 @@ import com.Project.TaskManager.repository.ProjectRepository;
 import com.Project.TaskManager.repository.UserRepository;
 import com.Project.TaskManager.repository.WorkspaceMemberRepository;
 import com.Project.TaskManager.repository.WorkspaceRepository;
+import com.Project.TaskManager.security.RequiresWorkspaceRole;
 import com.Project.TaskManager.security.service.UserDetailsImpl;
 
 import jakarta.transaction.Transactional;
@@ -43,6 +44,7 @@ public class ProjectServiceImpl implements ProjectService{
 
     // Create PRoject
 
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
     @Override
     @Transactional
     public ProjectResponse createProject(UserDetailsImpl currentUser,
@@ -51,7 +53,6 @@ public class ProjectServiceImpl implements ProjectService{
     ){
         Workspace workspace = getWorkspaceById(workspaceId);
 
-        validateAdminOrManagerRole(currentUser, workspace);
     
         String key = request.getKey().toUpperCase();
 
@@ -94,22 +95,22 @@ public class ProjectServiceImpl implements ProjectService{
 
     //_________________ ReaD ________________---
 
+    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
     @Override
     @Transactional
     public Page<ProjectResponse> getProjectsByWorkspace(UserDetailsImpl currentUser,UUID workspaceId, Pageable pageable){
         Workspace workspace = getWorkspaceById(workspaceId);
 
-        validateWorkspaceMembership(currentUser, workspace);
 
         return projectRepository.findAllByWorkspace(workspace, pageable)
                                 .map(ProjectResponse::from);
     }
 
+    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
     @Override
     @Transactional
     public ProjectResponse getProjectById(UserDetailsImpl currentUser,UUID workspaceId, UUID projectId){
         Workspace workspace = getWorkspaceById(workspaceId);
-        validateWorkspaceMembership(currentUser, workspace);
 
         Project project = getProjectByIdAndWorkspace(projectId, workspace);
 
@@ -118,6 +119,7 @@ public class ProjectServiceImpl implements ProjectService{
 
     // ─── Update ─────────────────────────────────────────────────────────────
 
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
     @Override
     @Transactional
     public ProjectResponse updateProject(UserDetailsImpl currentUser,
@@ -126,7 +128,6 @@ public class ProjectServiceImpl implements ProjectService{
                                          CreateProjectRequest request) {
 
         Workspace workspace = getWorkspaceById(workspaceId);
-        validateAdminOrManagerRole(currentUser, workspace);
 
         Project project = getProjectByIdAndWorkspace(projectId, workspace);
 
@@ -154,6 +155,7 @@ public class ProjectServiceImpl implements ProjectService{
 
     // ─── Archive ────────────────────────────────────────────────────────────
 
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
     @Override
     @Transactional
     public void archiveProject(UserDetailsImpl currentUser,
@@ -161,7 +163,6 @@ public class ProjectServiceImpl implements ProjectService{
                                UUID projectId) {
 
         Workspace workspace = getWorkspaceById(workspaceId);
-        validateAdminOrManagerRole(currentUser, workspace);
 
         Project project = getProjectByIdAndWorkspace(projectId, workspace);
 
@@ -214,43 +215,4 @@ public class ProjectServiceImpl implements ProjectService{
                             new ResourceNotFoundException("User not found: "+ userid));   
         }
     
-        private void validateAdminOrManagerRole(UserDetailsImpl currentuser, Workspace workspace){
-            boolean isOwner = workspace.getOwner().getId().equals(currentuser.getId());
-
-            if(isOwner) return ;
-
-            User user = getUserById((currentuser.getId()));
-
-            WorkspaceRole role  = workspaceMemberRepository
-                                .findByWorkspaceAndUser(workspace, user)
-                                .map(WorkspaceMember::getRole)
-                                .orElseThrow(()->
-        
-                                new UnauthorizedException("You are not a member of this workspace"));
-
-                                if(role != WorkspaceRole.ADMIN && role !=  WorkspaceRole.MANAGER){
-                                    throw new UnauthorizedException(
-                                        "Only Admin or Manager can perform this action"
-                                    );
-                                }
-        }
-
-        private void validateWorkspaceMembership(UserDetailsImpl currentUser,
-                                             Workspace workspace) {
-
-        boolean isOwner = workspace.getOwner().getId()
-                .equals(currentUser.getId());
-
-        if (isOwner) return;
-
-        User user = getUserById(currentUser.getId());
-
-        boolean isMember = workspaceMemberRepository
-                .existsByWorkspaceAndUser(workspace, user);
-
-        if (!isMember) {
-            throw new UnauthorizedException(
-                    "You are not a member of this workspace");
-        }
-    }
-}
+       }
