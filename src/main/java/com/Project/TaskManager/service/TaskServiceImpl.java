@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.Project.TaskManager.enums.NotificationType;
 import com.Project.TaskManager.enums.TaskStatus;
 import com.Project.TaskManager.enums.WorkspaceRole;
 import com.Project.TaskManager.exceptions.BadRequestException;
@@ -44,6 +45,7 @@ public class TaskServiceImpl implements TaskService{
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final WebSocketService webSocketService;
 
 
 
@@ -110,6 +112,12 @@ public class TaskServiceImpl implements TaskService{
         "TASK_CREATED",
         reporter.getFullName() + " created task " + saved.getTaskKey());
 
+        webSocketService.sendNotification(
+        saved,
+        reporter,
+        NotificationType.TASK_UPDATED,
+        reporter.getFullName() + " created task " + saved.getTaskKey(),
+        null);
 
         log.info("Task '{}' created in project '{}' by '{}'",
                 taskKey, project.getKey(), reporter.getEmail());
@@ -195,6 +203,13 @@ public class TaskServiceImpl implements TaskService{
         "TASK_UPDATED",
         currentUser.getEmail() + " updated task " + updated.getTaskKey());
 
+        webSocketService.sendNotification(
+        updated,
+        getUserById(currentUser.getId()),
+        NotificationType.TASK_UPDATED,
+        currentUser.getEmail() + " updated task " + updated.getTaskKey(),
+        null);
+
         log.info("Task '{}' updated by '{}'",
                 updated.getTaskKey(), currentUser.getEmail());
 
@@ -267,6 +282,14 @@ public class TaskServiceImpl implements TaskService{
         currentUser.getEmail() + " changed status of " + task.getTaskKey()
                 + " from " + task.getStatus() + " to " + newStatus,
         task.getStatus().name(),
+        newStatus.name());
+
+        webSocketService.sendNotification(
+        updated,
+        getUserById(currentUser.getId()),
+        NotificationType.TASK_UPDATED,
+        currentUser.getEmail() + " changed status of " + task.getTaskKey()
+                + " to " + newStatus,
         newStatus.name());
 
         log.info("Task '{}' status changed from '{}' to '{}' by '{}'",
