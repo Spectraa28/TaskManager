@@ -1,5 +1,6 @@
 package com.Project.TaskManager.service;
 
+import com.Project.TaskManager.enums.NotificationType;
 import com.Project.TaskManager.exceptions.BadRequestException;
 import com.Project.TaskManager.exceptions.ResourceNotFoundException;
 import com.Project.TaskManager.exceptions.UnauthorizedException;
@@ -31,6 +32,7 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final WebSocketService webSocketService;
 
     // ─── Comments ───────────────────────────────────────────────────────────
 
@@ -59,6 +61,13 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
         "COMMENT_ADDED",
         author.getFullName() + " commented on " + task.getTaskKey());
 
+        webSocketService.sendNotification(
+        task,
+        author,
+        NotificationType.COMMENT_ADDED,
+        author.getFullName() + " commented on " + task.getTaskKey(),
+        request.getContent());
+        
         log.info("Comment added on task '{}' by '{}'",
                 task.getTaskKey(), author.getEmail());
 
