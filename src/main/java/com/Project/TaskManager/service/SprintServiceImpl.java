@@ -23,6 +23,7 @@ import com.Project.TaskManager.repository.SprintRepository;
 import com.Project.TaskManager.repository.UserRepository;
 import com.Project.TaskManager.repository.WorkspaceMemberRepository;
 import com.Project.TaskManager.repository.WorkspaceRepository;
+import com.Project.TaskManager.security.RequiresWorkspaceRole;
 import com.Project.TaskManager.security.service.UserDetailsImpl;
 
 import jakarta.transaction.Transactional;
@@ -41,13 +42,13 @@ public class SprintServiceImpl implements SprintService{
     private final UserRepository userRepository;
 
     // Create Sprint 
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER) 
     @Override
     @Transactional
     public SprintResponse createSprint(UserDetailsImpl currentUser, UUID projectId, CreateSprintRequest request){
 
         Project project = getProjectById(projectId);
 
-        validateAdminOrManagerRole(currentUser, project.getWorkspace());
 
         if(!request.getEndDate().isAfter(request.getStartDate())){
             throw new BadRequestException("End date must be after start date");
@@ -73,18 +74,19 @@ public class SprintServiceImpl implements SprintService{
 
     //Read    
 
+    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
     @Override
     @Transactional
     public Page<SprintResponse> getSprintByProject(UserDetailsImpl currentUser, UUID projectid, Pageable pageable) {
             Project project = getProjectById(projectid);
 
-            validateWorkspaceMembership(currentUser, project.getWorkspace());
 
             return sprintRepository.findAllByProject(project, pageable).map(SprintResponse::from);
     }
 
 
     // Update
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
     @Override
     @Transactional
     public SprintResponse updateSprint(UserDetailsImpl currentUser, UUID projectid, UUID sprintId,
@@ -92,7 +94,6 @@ public class SprintServiceImpl implements SprintService{
     
                 Project project = getProjectById(projectid);
 
-                validateAdminOrManagerRole(currentUser, project.getWorkspace());
 
                 Sprint sprint = getSprintByIdAndProject(sprintId, project);
 
@@ -119,13 +120,13 @@ public class SprintServiceImpl implements SprintService{
 
 
 
-    // Start sprint _________        
+    // Start sprint _________
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)        
     @Override
     @Transactional
     public SprintResponse startSprint(UserDetailsImpl currentUser, UUID projectid, UUID sprintId) {
     Project project = getProjectById(projectid);
 
-        validateAdminOrManagerRole(currentUser, project.getWorkspace());
 
         Sprint sprint = getSprintByIdAndProject(sprintId, project);
 
@@ -155,12 +156,12 @@ public class SprintServiceImpl implements SprintService{
 
     // Complete sprint
 
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
     @Override
     @Transactional
     public SprintResponse completeSprint(UserDetailsImpl currentUser, UUID projectid, UUID sprintId) {
       Project project = getProjectById(projectid);
 
-        validateAdminOrManagerRole(currentUser, project.getWorkspace());
 
         Sprint sprint = getSprintByIdAndProject(sprintId, project);
 
@@ -204,36 +205,5 @@ public class SprintServiceImpl implements SprintService{
         
     }
 
-    private void validateAdminOrManagerRole(UserDetailsImpl currentUser, Workspace workspace){
-        boolean isOwner = workspace.getOwner().getId().equals(currentUser.getId());
-
-        if(isOwner) return ;
-
-        User user = getUserById(currentUser.getId());
-
-        WorkspaceRole role = workspaceMemberRepository
-                            .findByWorkspaceAndUser(workspace, user)
-                            .map(WorkspaceMember::getRole)
-                            .orElseThrow(()-> new UnauthorizedException("You are  not a member of this workspace"));
-
-        if(role != WorkspaceRole.ADMIN  && role != WorkspaceRole.MANAGER){
-            throw new UnauthorizedException(
-                "Only ADMIN or MANAGER can perform this action"
-            );
-        }
-    }
-
-    private void validateWorkspaceMembership(UserDetailsImpl currentUser, Workspace workspace){
-        boolean isOwner = workspace.getOwner().getId().equals(currentUser.getId());
-
-        if(isOwner) return;
-
-        User  user = getUserById(currentUser.getId());
-
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(workspace, user);
-
-        if(!isMember){
-            throw new UnauthorizedException("You are not a member of this workspace");
-        }
-    }
+    
 }
