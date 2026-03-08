@@ -2,10 +2,12 @@ package com.Project.TaskManager.service;
 
 import java.util.UUID;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.Project.TaskManager.config.RabbitMQConfig;
 import com.Project.TaskManager.enums.NotificationType;
 import com.Project.TaskManager.enums.TaskStatus;
 import com.Project.TaskManager.enums.WorkspaceRole;
@@ -18,6 +20,7 @@ import com.Project.TaskManager.model.Task;
 import com.Project.TaskManager.model.User;
 import com.Project.TaskManager.model.Workspace;
 import com.Project.TaskManager.model.WorkspaceMember;
+import com.Project.TaskManager.payload.event.NotificationEvent;
 import com.Project.TaskManager.payload.request.CreateTaskRequest;
 import com.Project.TaskManager.payload.response.TaskResponse;
 import com.Project.TaskManager.repository.ProjectRepository;
@@ -46,6 +49,7 @@ public class TaskServiceImpl implements TaskService{
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
     private final WebSocketService webSocketService;
+    private final RabbitTemplate rabbitTemplate;
 
 
 
@@ -112,7 +116,7 @@ public class TaskServiceImpl implements TaskService{
         "TASK_CREATED",
         reporter.getFullName() + " created task " + saved.getTaskKey());
 
-        webSocketService.sendNotification(
+       publishNotificationEvent(
         saved,
         reporter,
         NotificationType.TASK_UPDATED,
@@ -203,11 +207,12 @@ public class TaskServiceImpl implements TaskService{
         "TASK_UPDATED",
         currentUser.getEmail() + " updated task " + updated.getTaskKey());
 
-        webSocketService.sendNotification(
+       User actor = getUserById(currentUser.getId());
+publishNotificationEvent(
         updated,
-        getUserById(currentUser.getId()),
+        actor,
         NotificationType.TASK_UPDATED,
-        currentUser.getEmail() + " updated task " + updated.getTaskKey(),
+        actor.getFullName() + " updated task " + updated.getTaskKey(),
         null);
 
         log.info("Task '{}' updated by '{}'",
@@ -284,12 +289,13 @@ public class TaskServiceImpl implements TaskService{
         task.getStatus().name(),
         newStatus.name());
 
-        webSocketService.sendNotification(
+     User actor = getUserById(currentUser.getId());
+publishNotificationEvent(
         updated,
-        getUserById(currentUser.getId()),
+        actor,
         NotificationType.TASK_UPDATED,
-        currentUser.getEmail() + " changed status of " + task.getTaskKey()
-                + " to " + newStatus,
+        actor.getFullName() + " changed status of " + task.getTaskKey()
+                + " from " + oldStatus + " to " + newStatus,
         newStatus.name());
 
         log.info("Task '{}' status changed from '{}' to '{}' by '{}'",
@@ -344,6 +350,40 @@ public class TaskServiceImpl implements TaskService{
                     + current + " → " + next);
         }
     }
+
+    private void publishNotificationEvent(Task task,
+                                       User actor,
+                                       NotificationType type,
+                                       String message,
+                                       String payload) {
+    try {
+        NotificationEvent event = NotificationEvent.builder()
+                .type(type)
+                .message(message)
+                .taskId(task.getId())
+                .taskKey(task.getTaskKey())
+                .taskTitle(task.getTitle())
+                .projectId(task.getProject().getId())
+                .workspaceId(task.getProject().getWorkspace().getId())
+                .actorId(actor.getId())
+                .actorName(actor.getFullName())
+                .timestamp(java.time.LocalDateTime.now())
+                .payload(payload)
+                .build();
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.NOTIFICATION_EXCHANGE,
+                RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
+                event);
+
+        log.debug("Notification event published for task '{}' type '{}'",
+                task.getTaskKey(), type);
+
+    } catch (Exception e) {
+        log.error("Failed to publish notification event " +
+                "for task '{}': {}", task.getTaskKey(), e.getMessage());
+    }
+}
 
    
 
