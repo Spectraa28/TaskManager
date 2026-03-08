@@ -1,5 +1,6 @@
 package com.Project.TaskManager.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,4 +19,6 @@ public interface TaskWatcherRepository  extends JpaRepository<TaskWatcher,UUID>{
     Optional<TaskWatcher> findByTaskAndUser(Task task,User user);
 
     long countByTask(Task task);
+
+    List<TaskWatcher> findAllByTask(Task task);
 }

@@ -1,10 +1,12 @@
 package com.Project.TaskManager.service;
 
+import com.Project.TaskManager.config.RabbitMQConfig;
 import com.Project.TaskManager.enums.NotificationType;
 import com.Project.TaskManager.exceptions.BadRequestException;
 import com.Project.TaskManager.exceptions.ResourceNotFoundException;
 import com.Project.TaskManager.exceptions.UnauthorizedException;
 import com.Project.TaskManager.model.*;
+import com.Project.TaskManager.payload.event.NotificationEvent;
 import com.Project.TaskManager.payload.request.CommentRequest;
 import com.Project.TaskManager.payload.request.TimeLogRequest;
 import com.Project.TaskManager.payload.response.CommentResponse;
@@ -13,6 +15,8 @@ import com.Project.TaskManager.repository.*;
 import com.Project.TaskManager.security.service.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,7 +37,7 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
     private final WebSocketService webSocketService;
-
+    private final RabbitTemplate rabbitTemplate;
     // ─── Comments ───────────────────────────────────────────────────────────
 
     @Override
@@ -61,13 +65,30 @@ public class TaskExtrasServiceImpl implements TaskExtrasService {
         "COMMENT_ADDED",
         author.getFullName() + " commented on " + task.getTaskKey());
 
-        webSocketService.sendNotification(
-        task,
-        author,
-        NotificationType.COMMENT_ADDED,
-        author.getFullName() + " commented on " + task.getTaskKey(),
-        request.getContent());
-        
+       try {
+    NotificationEvent event = NotificationEvent.builder()
+            .type(NotificationType.COMMENT_ADDED)
+            .message(author.getFullName() +
+                    " commented on " + task.getTaskKey())
+            .taskId(task.getId())
+            .taskKey(task.getTaskKey())
+            .taskTitle(task.getTitle())
+            .projectId(task.getProject().getId())
+            .workspaceId(task.getProject().getWorkspace().getId())
+            .actorId(author.getId())
+            .actorName(author.getFullName())
+            .timestamp(java.time.LocalDateTime.now())
+            .payload(request.getContent())
+            .build();
+
+    rabbitTemplate.convertAndSend(
+            RabbitMQConfig.NOTIFICATION_EXCHANGE,
+            RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
+            event);
+} catch (Exception e) {
+    log.error("Failed to publish comment notification: {}",
+            e.getMessage());
+}
         log.info("Comment added on task '{}' by '{}'",
                 task.getTaskKey(), author.getEmail());
 
