@@ -208,13 +208,19 @@ public class TaskServiceImpl implements TaskService{
         currentUser.getEmail() + " updated task " + updated.getTaskKey());
 
        User actor = getUserById(currentUser.getId());
+// Check if assignee changed and use TASK_ASSIGNED type
+NotificationType notifType = request.getAssigneeId() != null 
+        ? NotificationType.TASK_ASSIGNED 
+        : NotificationType.TASK_UPDATED;
+
 publishNotificationEvent(
         updated,
         actor,
-        NotificationType.TASK_UPDATED,
-        actor.getFullName() + " updated task " + updated.getTaskKey(),
+        notifType,
+        actor.getFullName() + (notifType == NotificationType.TASK_ASSIGNED 
+                ? " assigned you to " + updated.getTaskKey()
+                : " updated task " + updated.getTaskKey()),
         null);
-
         log.info("Task '{}' updated by '{}'",
                 updated.getTaskKey(), currentUser.getEmail());
 
@@ -357,19 +363,22 @@ publishNotificationEvent(
                                        String message,
                                        String payload) {
     try {
-        NotificationEvent event = NotificationEvent.builder()
-                .type(type)
-                .message(message)
-                .taskId(task.getId())
-                .taskKey(task.getTaskKey())
-                .taskTitle(task.getTitle())
-                .projectId(task.getProject().getId())
-                .workspaceId(task.getProject().getWorkspace().getId())
-                .actorId(actor.getId())
-                .actorName(actor.getFullName())
-                .timestamp(java.time.LocalDateTime.now())
-                .payload(payload)
-                .build();
+       NotificationEvent event = NotificationEvent.builder()
+        .type(type)
+        .message(message)
+        .taskId(task.getId())
+        .taskKey(task.getTaskKey())
+        .taskTitle(task.getTitle())
+        .projectId(task.getProject().getId())
+        .workspaceId(task.getProject().getWorkspace().getId())
+        .actorId(actor.getId())
+        .actorName(actor.getFullName())
+        .timestamp(java.time.LocalDateTime.now())
+        .payload(payload)
+        .recipientIds(task.getAssignee() != null 
+                ? java.util.List.of(task.getAssignee().getId()) 
+                : java.util.List.of())
+        .build();
 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.NOTIFICATION_EXCHANGE,

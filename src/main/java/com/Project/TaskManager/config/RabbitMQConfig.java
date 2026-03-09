@@ -1,6 +1,8 @@
 package com.Project.TaskManager.config;
 
 
+import java.util.concurrent.Executor;
+
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -8,6 +10,7 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
 public class RabbitMQConfig {
@@ -33,6 +36,17 @@ public class RabbitMQConfig {
     public Binding notificationBinding(Queue notificationQueue, TopicExchange notificationExchange){
             return BindingBuilder.bind(notificationQueue).to(notificationExchange).with(NOTIFICATION_ROUTING_KEY);
     }
+
+    @Bean(name = "taskExecutor")
+public Executor taskExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(5);
+    executor.setMaxPoolSize(10);
+    executor.setQueueCapacity(25);
+    executor.setThreadNamePrefix("cTaskExecutor-");
+    executor.initialize();
+    return executor;
+}
 
     @Bean
     @SuppressWarnings("deprecation")

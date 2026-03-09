@@ -33,6 +33,9 @@ public class NotificationEvent implements Serializable{
     private UUID actorId;
     private String actorName;
 
+  
+    private String oldValue;
+
     private LocalDateTime timestamp;
 
     private String payload;

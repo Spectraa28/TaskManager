@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:0; }
+        .container { max-width:600px; margin:30px auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .header { background:#4F46E5; color:#fff; padding:24px 32px; }
+        .header h1 { margin:0; font-size:20px; }
+        .body { padding:32px; color:#333; }
+        .task-card { background:#f8f8f8; border-left:4px solid #4F46E5; padding:16px; border-radius:4px; margin:20px 0; }
+        .task-key { font-weight:bold; color:#4F46E5; }
+        .btn { display:inline-block; background:#4F46E5; color:#fff; padding:12px 24px; border-radius:6px; text-decoration:none; margin-top:20px; }
+        .footer { background:#f4f4f4; padding:16px 32px; font-size:12px; color:#888; text-align:center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 th:text="${appName}">TaskFlow</h1>
+    </div>
+    <div class="body">
+        <p>Hi <strong th:text="${recipientName}">User</strong>,</p>
+        <p><span th:text="${actorName}">Someone</span> has assigned you to a task.</p>
+        <div class="task-card">
+            <p class="task-key" th:text="${taskKey}">BACK-1</p>
+            <p th:text="${taskTitle}">Task title</p>
+        </div>
+        <a th:href="${taskUrl}" class="btn">View Task</a>
+    </div>
+    <div class="footer">
+        <p>You are receiving this because you are a member of <span th:text="${appName}">TaskFlow</span>.</p>
+    </div>
+</div>
+</body>
+</html>
