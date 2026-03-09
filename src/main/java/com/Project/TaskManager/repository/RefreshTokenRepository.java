@@ -1,5 +1,6 @@
 package com.Project.TaskManager.repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,5 +23,9 @@ public interface RefreshTokenRepository
   void deleteByUser(User user);
 
   boolean existsByTokenAndRevokedFalse(String token);
+
+  @Modifying
+@Query("DELETE FROM RefreshToken r WHERE r.expiresAt < :now")
+int deleteAllByExpiresAtBefore(Instant now);
     
 }

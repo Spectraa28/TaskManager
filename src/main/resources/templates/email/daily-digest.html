@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:0; }
+        .container { max-width:600px; margin:30px auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .header { background:#4F46E5; color:#fff; padding:24px 32px; }
+        .header h1 { margin:0; font-size:20px; }
+        .body { padding:32px; color:#333; }
+        .notification-item { border-bottom:1px solid #f0f0f0; padding:12px 0; }
+        .notification-item:last-child { border-bottom:none; }
+        .notification-type { font-size:11px; font-weight:bold; color:#4F46E5; text-transform:uppercase; }
+        .notification-message { color:#333; margin-top:4px; }
+        .btn { display:inline-block; background:#4F46E5; color:#fff; padding:12px 24px; border-radius:6px; text-decoration:none; margin-top:20px; }
+        .footer { background:#f4f4f4; padding:16px 32px; font-size:12px; color:#888; text-align:center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 th:text="${appName}">TaskFlow</h1>
+    </div>
+    <div class="body">
+        <p>Hi <strong th:text="${recipientName}">User</strong>,</p>
+        <p>Here is your daily digest — <strong th:text="${count}">0</strong> updates since yesterday.</p>
+
+        <div th:each="notification : ${notifications}" class="notification-item">
+            <div class="notification-type" th:text="${notification.type}">TYPE</div>
+            <div class="notification-message" th:text="${notification.message}">Message</div>
+        </div>
+
+        <a th:href="${appUrl}" class="btn">Open TaskFlow</a>
+    </div>
+    <div class="footer">
+        <p>You are receiving this daily digest from <span th:text="${appName}">TaskFlow</span>.</p>
+    </div>
+</div>
+</body>
+</html>
