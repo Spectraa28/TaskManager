@@ -20,7 +20,7 @@
     <description>Real-time collaborative task management system</description>
 
     <properties>
-        <java.version>25</java.version>
+       <java.version>24</java.version>
     </properties>
 
     <dependencies>

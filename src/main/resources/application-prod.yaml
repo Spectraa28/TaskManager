@@ -18,10 +18,7 @@ spring:
       password: ${REDIS_PASSWORD}
       timeout: 2000ms
   rabbitmq:
-    host: ${RABBITMQ_HOST}
-    port: ${RABBITMQ_PORT}
-    username: ${RABBITMQ_USERNAME}
-    password: ${RABBITMQ_PASSWORD}
+    addresses: ${RABBITMQ_URL}
   mail:
     host: smtp.gmail.com
     port: 587
