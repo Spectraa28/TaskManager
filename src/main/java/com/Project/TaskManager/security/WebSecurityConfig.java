@@ -73,6 +73,13 @@ public class WebSecurityConfig {
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/error").permitAll()
+                .requestMatchers(
+                                    "/api/v1/auth/**",
+                                    "/ws/**",
+                                    "/swagger-ui/**",        
+                                    "/swagger-ui.html",      
+                                    "/v3/api-docs/**"      
+                                                    ).permitAll()
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers
