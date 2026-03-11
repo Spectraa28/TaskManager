@@ -1,5 +1,7 @@
 package com.Project.TaskManager.security;
 
+
+import com.Project.TaskManager.security.RateLimitFilter;
 import com.Project.TaskManager.security.jwt.AuthEntryPointJwt;
 import com.Project.TaskManager.security.jwt.AuthTokenFilter;
 import com.Project.TaskManager.security.service.UserDetailsServiceImpl;
@@ -29,9 +31,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @RequiredArgsConstructor
 public class WebSecurityConfig {
 
+    
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthEntryPointJwt unauthorizedHandler;
     private final AuthTokenFilter authTokenFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -79,6 +83,8 @@ public class WebSecurityConfig {
             .addFilterBefore(authTokenFilter,
                     UsernamePasswordAuthenticationFilter.class);
 
+        http.addFilterBefore(rateLimitFilter,
+        UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

@@ -8,10 +8,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.Project.TaskManager.config.CacheConfig;
 import com.Project.TaskManager.enums.SprintStatus;
 import com.Project.TaskManager.enums.TaskStatus;
 import com.Project.TaskManager.exceptions.ResourceNotFoundException;
@@ -48,6 +50,7 @@ public class DashboardServiceImpl implements DashboardService{
    
    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.USER_DASHBOARD_CACHE, key = "#userId")
     public DashboardResponse.UserDashboard getUserDashboard(UUID userId){
 
         log.info("Building user dashboard for user {}", userId);
@@ -106,6 +109,7 @@ public class DashboardServiceImpl implements DashboardService{
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.WORKSPACE_DASHBOARD_CACHE, key = "#workspaceId")
     public DashboardResponse.WorkspaceDashboard getWorkspaceDashboard(UUID workspaceId, UUID currentUserId) {
 
         log.info("Building workspace dashboard for workspace {}", workspaceId);
