@@ -11,6 +11,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
@@ -58,4 +59,13 @@ public class Project extends BaseEntity{
 
     @Column(nullable = false)
     private boolean archived =false;
+
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
+    private java.util.List<ProjectMember> members;
+
+     @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
+    private java.util.List<Task> tasks;
+
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
+    private java.util.List<Sprint> sprints;
 }

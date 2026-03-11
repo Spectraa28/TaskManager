@@ -70,4 +70,10 @@ public class Task extends BaseEntity{
 
     @Column(nullable = false)
     private Integer sequenceNumber;
+
+    @Column
+private java.time.LocalDate dueDate;
+
+@Column(nullable = false)
+private boolean archived = false;
 }
