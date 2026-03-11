@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.Project.TaskManager.enums.SprintStatus;
@@ -21,4 +23,21 @@ public interface SprintRepository extends JpaRepository<Sprint,UUID>{
 
     Optional<Sprint> findByProjectAndStatus(Project project, SprintStatus status);
     
+    // Count active sprints in a workspace
+@Query("""
+        SELECT COUNT(s) FROM Sprint s
+        WHERE s.project.workspace.id = :workspaceId
+        AND s.status = :status
+        """)
+long countByWorkspaceIdAndStatus(@Param("workspaceId") UUID workspaceId,
+                                  @Param("status") SprintStatus status);
+
+// Count completed sprints in a workspace
+@Query("""
+        SELECT COUNT(s) FROM Sprint s
+        WHERE s.project.workspace.id = :workspaceId
+        AND s.status = :status
+        """)
+long countCompletedByWorkspaceId(@Param("workspaceId") UUID workspaceId,
+                                  @Param("status") SprintStatus status);
 }

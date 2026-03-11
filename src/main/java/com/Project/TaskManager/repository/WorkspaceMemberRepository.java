@@ -37,5 +37,7 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
 
     int countByWorkspace(Workspace workspace);
 
+    long countByUser(User currentUser);
+
     
 }
