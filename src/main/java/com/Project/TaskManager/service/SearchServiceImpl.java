@@ -3,9 +3,11 @@ package com.Project.TaskManager.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.Project.TaskManager.config.CacheConfig;
 import com.Project.TaskManager.model.Project;
 import com.Project.TaskManager.model.Task;
 import com.Project.TaskManager.model.User;
@@ -28,6 +30,7 @@ public class SearchServiceImpl implements SearchService{
     
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.SEARCH_CACHE, key = "#userId + ':' + #keyword.toLowerCase()")
     public SearchResponse search(String keyword, UUID userId) {
     
         log.info("Searching for '{}' for user {}",keyword,userId);
