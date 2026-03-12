@@ -17,6 +17,8 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
       timeout: 2000ms
+      ssl:
+        enabled: true
   rabbitmq:
     addresses: ${RABBITMQ_URL}
   mail:
