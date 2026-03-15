@@ -180,11 +180,11 @@ public class ProjectServiceImpl implements ProjectService{
 
 
  // ---------------- helperS ---------------
-    private Workspace getWorkspaceById(UUID workspaceId){
-        return workspaceRepository.findById(workspaceId).orElseThrow(
-                ()-> new ResourceNotFoundException("Workspace not FOund: " + workspaceId)
-        );
-    }
+  private Workspace getWorkspaceById(UUID workspaceId){
+    return workspaceRepository.findByIdAndArchivedFalse(workspaceId).orElseThrow(
+            ()-> new ResourceNotFoundException("Workspace not found: " + workspaceId)
+    );
+}
 
 
     private Project getProjectByIdAndWorkspace(UUID projectId, Workspace workspace){

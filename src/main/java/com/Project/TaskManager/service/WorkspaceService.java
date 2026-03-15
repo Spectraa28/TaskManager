@@ -1,12 +1,15 @@
 package com.Project.TaskManager.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import com.Project.TaskManager.model.WorkspaceMember;
 import com.Project.TaskManager.payload.request.CreateWorkspaceRequest;
 import com.Project.TaskManager.payload.request.InviteMemberRequest;
+import com.Project.TaskManager.payload.response.WorkspaceMemberResponse;
 import com.Project.TaskManager.payload.response.WorkspaceResponse;
 
 public interface WorkspaceService {
@@ -27,6 +30,8 @@ public interface WorkspaceService {
     Page<WorkspaceResponse> getMyWorkspaces(
         UUID userId, Pageable pageable
     );
+
+    List<WorkspaceMemberResponse> getWorkspaceMembers(UUID workspaceId, UUID userId);
 
     WorkspaceResponse inviteMember(
         UUID workspaceId,

@@ -1,6 +1,8 @@
 package com.Project.TaskManager.service;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collector;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +18,7 @@ import com.Project.TaskManager.model.Workspace;
 import com.Project.TaskManager.model.WorkspaceMember;
 import com.Project.TaskManager.payload.request.CreateWorkspaceRequest;
 import com.Project.TaskManager.payload.request.InviteMemberRequest;
+import com.Project.TaskManager.payload.response.WorkspaceMemberResponse;
 import com.Project.TaskManager.payload.response.WorkspaceResponse;
 import com.Project.TaskManager.repository.UserRepository;
 import com.Project.TaskManager.repository.WorkspaceMemberRepository;
@@ -41,7 +44,7 @@ public class WorkspaceServiceImpl implements WorkspaceService{
     public WorkspaceResponse createWorkspace(CreateWorkspaceRequest request, UUID userId) {
         
         //validate slug is not taken 
-        if(workspaceRepository.existsBySlug(request.getSlug())){
+        if(workspaceRepository.existsBySlugAndArchivedFalse(request.getSlug())){
             throw new BadRequestException("Slug is already in use" + request.getSlug());
         }
 
@@ -81,7 +84,7 @@ public class WorkspaceServiceImpl implements WorkspaceService{
     @Transactional(readOnly = true)
     public WorkspaceResponse getWorkspaceBySlug(String slug, UUID userId) {
         Workspace workspace = workspaceRepository
-                            .findBySlug(slug)
+                            .findBySlugAndArchivedFalse(slug)
                             .orElseThrow(()-> new ResourceNotFoundException("Workspace not found: "+ slug));
         
         User user = userRepository.findById(userId)
@@ -113,7 +116,7 @@ public class WorkspaceServiceImpl implements WorkspaceService{
 
 
     //  check slug not taken by another workspace
-    if(!workspace.getSlug().equals(request.getSlug()) && workspaceRepository.existsBySlug(request.getSlug())){
+    if(!workspace.getSlug().equals(request.getSlug()) && workspaceRepository.existsBySlugAndArchivedFalse(request.getSlug())){
         throw new BadRequestException(
             "Slug already in use : " + request.getSlug()
         );
@@ -158,6 +161,33 @@ public class WorkspaceServiceImpl implements WorkspaceService{
     
     }
     
+
+    @Override
+@Transactional(readOnly = true)
+public List<WorkspaceMemberResponse> getWorkspaceMembers(UUID workspaceId, UUID userId) {
+    Workspace workspace = workspaceRepository.findByIdAndArchivedFalse(workspaceId)
+            .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+
+    // Verify requester is a member
+    User requester = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+    if (!workspaceMemberRepository.existsByWorkspaceAndUser(workspace, requester)) {
+        throw new UnauthorizedException("You are not a member of this workspace");
+    }
+
+    return workspaceMemberRepository.findByWorkspace(workspace)
+            .stream()
+            .map(member -> WorkspaceMemberResponse.builder()
+                    .id(member.getId())
+                    .userId(member.getUser().getId())
+                    .fullName(member.getUser().getFullName())
+                    .email(member.getUser().getEmail())
+                    .role(member.getRole())
+                    .joinedAt(member.getCreatedAt())
+                    .build())
+            .toList();
+}
     
     
     

@@ -1,5 +1,6 @@
 package com.Project.TaskManager.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.Project.TaskManager.payload.request.CreateWorkspaceRequest;
 import com.Project.TaskManager.payload.request.InviteMemberRequest;
 import com.Project.TaskManager.payload.response.ApiResponse;
+import com.Project.TaskManager.payload.response.WorkspaceMemberResponse;
 import com.Project.TaskManager.payload.response.WorkspaceResponse;
 import com.Project.TaskManager.security.CurrentUser;
 import com.Project.TaskManager.security.service.UserDetailsImpl;
@@ -156,6 +158,20 @@ public class WorkspaceController {
                 ApiResponse.success("Member removed successfully")
         );
     }
+
+    @GetMapping("/{workspaceId}/members")
+public ResponseEntity<ApiResponse<List<WorkspaceMemberResponse>>> getWorkspaceMembers(
+        @PathVariable UUID workspaceId,
+        @CurrentUser UserDetailsImpl currentUser) {
+
+    List<WorkspaceMemberResponse> response = workspaceService
+            .getWorkspaceMembers(workspaceId, currentUser.getId());
+
+    return ResponseEntity.ok(ApiResponse.success(
+            "Members fetched successfully",
+            response
+    ));
+}
 }
     
 

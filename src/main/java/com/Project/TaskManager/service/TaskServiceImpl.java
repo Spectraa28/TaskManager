@@ -109,6 +109,7 @@ public class TaskServiceImpl implements TaskService{
                 .build();
 
         Task saved = taskRepository.save(task);
+        taskRepository.flush();
 
         activityLogService.log(
         saved,
@@ -200,6 +201,8 @@ public class TaskServiceImpl implements TaskService{
         task.setStoryPoints(request.getStoryPoints());
 
         Task updated = taskRepository.save(task);
+        taskRepository.flush(); // ← add this line
+
 
         activityLogService.log(
         updated,
@@ -276,6 +279,8 @@ publishNotificationEvent(
 
         task.setStatus(newStatus);
         Task updated = taskRepository.save(task);
+        taskRepository.flush(); // ← add this line
+
 
         activityLogService.log(
         updated,

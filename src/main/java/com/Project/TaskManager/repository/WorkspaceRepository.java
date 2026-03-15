@@ -1,5 +1,4 @@
 package com.Project.TaskManager.repository;
-
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,24 +11,43 @@ import org.springframework.stereotype.Repository;
 import com.Project.TaskManager.model.User;
 import com.Project.TaskManager.model.Workspace;
 
-
 @Repository
-public interface WorkspaceRepository extends JpaRepository<Workspace,UUID>{
-    Optional<Workspace> findBySlug(String slug);
+public interface WorkspaceRepository extends JpaRepository<Workspace, UUID> {
+
+    Optional<Workspace> findBySlugAndArchivedFalse(String slug);
 
     boolean existsBySlug(String slug);
+    boolean existsBySlugAndArchivedFalse(String slug);
 
+    // Fixed query — archived=false applies to the whole result
     @Query("""
             SELECT w FROM Workspace w
-            WHERE w.owner = :user
-            OR w.id IN (
-            SELECT wm.workspace.id
-            FROM WorkspaceMember wm
-            WHERE wm.user = :user
+            WHERE w.archived = false
+            AND (
+                w.owner = :user
+                OR w.id IN (
+                    SELECT wm.workspace.id
+                    FROM WorkspaceMember wm
+                    WHERE wm.user = :user
+                )
             )
-            AND w.archived = false
             """)
     Page<Workspace> findAllByMemberOrOwner(User user, Pageable pageable);
 
-    boolean existsBySlugAndArchivedFalse(String slug);
+    // For viewing archived workspaces
+    @Query("""
+            SELECT w FROM Workspace w
+            WHERE w.archived = true
+            AND (
+                w.owner = :user
+                OR w.id IN (
+                    SELECT wm.workspace.id
+                    FROM WorkspaceMember wm
+                    WHERE wm.user = :user
+                )
+            )
+            """)
+
+    Optional<Workspace> findByIdAndArchivedFalse(UUID id);
+    Page<Workspace> findAllArchivedByMemberOrOwner(User user, Pageable pageable);
 }

@@ -1,10 +1,6 @@
 package com.Project.TaskManager.model;
 
 import jakarta.persistence.*;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,9 +29,9 @@ public class ActivityLog extends BaseEntity{
     @Column
     private String newValue;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "task_id", nullable = false)
-    private Task task;
+   @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+@JoinColumn(name = "task_id", nullable = false)
+private Task task;
 
 
     @ManyToOne(fetch = FetchType.LAZY)
