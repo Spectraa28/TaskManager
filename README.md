@@ -21,7 +21,7 @@
 | Resource | URL |
 |---|---|
 | 🚀 API Base | `https://taskmanager-44v4.onrender.com` |
-| 📖 Swagger UI | [https://taskmanager-44v4.onrender.com/swagger-ui.html](https://taskmanager-44v4.onrender.com/swagger-ui.html) |
+| 📖 Swagger UI |  |
 
 ---
 
