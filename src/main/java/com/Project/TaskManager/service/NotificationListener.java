@@ -46,6 +46,9 @@ public class NotificationListener {
                     .forEach(watcher -> {
                         User recipient = watcher.getUser();
 
+                        // Skip if watcher is the actor
+                        if (recipient.getId().equals(actor.getId())) return;
+
                         notificationService.createNotification(
                                 recipient, actor, task,
                                 event.getType(),
@@ -61,36 +64,42 @@ public class NotificationListener {
                         sendEmailForEvent(event, task, actor, recipient);
                     });
 
-            // ── Notify reporter ───────────────────────────────────────
-            notificationService.createNotification(
-                    task.getReporter(), actor, task,
-                    event.getType(),
-                    event.getMessage(),
-                    event.getPayload());
+            // ── Notify reporter (skip if reporter is the actor) ───────
+            if (!task.getReporter().getId().equals(actor.getId())) {
+                notificationService.createNotification(
+                        task.getReporter(), actor, task,
+                        event.getType(),
+                        event.getMessage(),
+                        event.getPayload());
 
-            sendEmailForEvent(event, task, actor, task.getReporter());
+                sendEmailForEvent(event, task, actor, task.getReporter());
+            }
 
-// ── Notify assignee via recipientIds ─────────────────────────
-if (event.getRecipientIds() != null &&
-        !event.getRecipientIds().isEmpty()) {
-    event.getRecipientIds().forEach(recipientId -> {
-        userRepository.findById(recipientId).ifPresent(recipient -> {
-            notificationService.createNotification(
-                    recipient, actor, task,
-                    event.getType(),
-                    event.getMessage(),
-                    event.getPayload());
+            // ── Notify assignee via recipientIds ──────────────────────
+            if (event.getRecipientIds() != null && !event.getRecipientIds().isEmpty()) {
+                event.getRecipientIds().forEach(recipientId -> {
+                    // Skip actor and reporter (already notified above)
+                    if (recipientId.equals(actor.getId())) return;
+                    if (recipientId.equals(task.getReporter().getId())) return;
 
-            sendEmailForEvent(event, task, actor, recipient);
-        });
-    });
-}
-            log.info("Notification event processed successfully " +
-                    "for task '{}'", event.getTaskKey());
+                    userRepository.findById(recipientId).ifPresent(recipient -> {
+                        notificationService.createNotification(
+                                recipient, actor, task,
+                                event.getType(),
+                                event.getMessage(),
+                                event.getPayload());
+
+                        sendEmailForEvent(event, task, actor, recipient);
+                    });
+                });
+            }
+
+            log.info("Notification event processed successfully for task '{}'",
+                    event.getTaskKey());
 
         } catch (Exception e) {
-            log.error("Failed to process notification event " +
-                    "for task '{}': {}", event.getTaskKey(), e.getMessage());
+            log.error("Failed to process notification event for task '{}': {}",
+                    event.getTaskKey(), e.getMessage());
         }
     }
 
@@ -99,13 +108,13 @@ if (event.getRecipientIds() != null &&
                                    Task task,
                                    User actor,
                                    User recipient) {
-       log.info("Attempting email — type: '{}' recipient: '{}' actor: '{}'",
-            event.getType(), recipient.getEmail(), actor.getEmail());
+        log.info("Attempting email — type: '{}' recipient: '{}' actor: '{}'",
+                event.getType(), recipient.getEmail(), actor.getEmail());
 
-    if (recipient.getId().equals(actor.getId())) {
-        log.info("Skipping email — self notification");
-        return;
-    }
+        if (recipient.getId().equals(actor.getId())) {
+            log.info("Skipping email — self notification");
+            return;
+        }
 
         try {
             switch (event.getType()) {
