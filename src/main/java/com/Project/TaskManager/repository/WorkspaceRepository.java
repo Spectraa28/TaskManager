@@ -47,7 +47,19 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, UUID> {
                 )
             )
             """)
-
     Optional<Workspace> findByIdAndArchivedFalse(UUID id);
-    Page<Workspace> findAllArchivedByMemberOrOwner(User user, Pageable pageable);
+    
+    @Query("""
+        SELECT w FROM Workspace w
+        WHERE w.archived = true
+        AND (
+            w.owner = :user
+            OR w.id IN (
+                SELECT wm.workspace.id
+                FROM WorkspaceMember wm
+                WHERE wm.user = :user
+            )
+        )
+        """)
+    Page<Workspace> findArchivedWorkspacesForUser(User user, Pageable pageable);
 }
