@@ -25,9 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NotificationServiceImpl implements  NotificationService{
-    
-    
+public class NotificationServiceImpl implements NotificationService {
+
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final TaskRepository taskRepository;
@@ -35,36 +34,35 @@ public class NotificationServiceImpl implements  NotificationService{
     @Override
     @Transactional
     public void createNotification(User recipient,
-                                   User actor,
-                                   Task task,
-                                   NotificationType type,
-                                   String message,
-                                   String payload) {
-        if(recipient.getId().equals(actor.getId())) return;
-        
-        
+            User actor,
+            Task task,
+            NotificationType type,
+            String message,
+            String payload) {
+        if (recipient.getId().equals(actor.getId()))
+            return;
+
         Notification notification = Notification.builder()
-                    .recipient(recipient)
-                    .actor(actor)
-                    .task(task)
-                    .type(type)
-                    .message(message)
-                    .payload(payload)
-                    .read(false)
-                    .build();
+                .recipient(recipient)
+                .actor(actor)
+                .task(task)
+                .type(type)
+                .message(message)
+                .payload(payload)
+                .read(false)
+                .build();
 
         notificationRepository.save(notification);
-        log.debug("Notification created for user '{}' - type: '{}'", recipient.getEmail(),type);
-        }
+        log.debug("Notification created for user '{}' - type: '{}'", recipient.getEmail(), type);
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public  Page<NotificationResponse> getMyNotifications(UserDetailsImpl currentUser, Pageable pageable){
-                User user = getUserById(currentUser.getId());
-                return notificationRepository.findByRecipientAndReadFalseOrderByCreatedAtDesc(user, pageable)
+    public Page<NotificationResponse> getMyNotifications(UserDetailsImpl currentUser, Pageable pageable) {
+        User user = getUserById(currentUser.getId());
+        return notificationRepository.findByRecipientOrderByCreatedAtDesc(user, pageable)
                 .map(NotificationResponse::from);
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -73,23 +71,22 @@ public class NotificationServiceImpl implements  NotificationService{
 
         User user = getUserById(currentUser.getId());
         return notificationRepository
-                .findByRecipientOrderByCreatedAtDesc(
+                .findByRecipientAndReadFalseOrderByCreatedAtDesc(
                         user, pageable)
                 .map(NotificationResponse::from);
     }
 
-
     @Override
     @Transactional(readOnly = true)
-    public long countUnread(UserDetailsImpl currentUser){
+    public long countUnread(UserDetailsImpl currentUser) {
         User user = getUserById(currentUser.getId());
         return notificationRepository.countByRecipientAndReadFalse(user);
     }
 
     @Override
     @Transactional
-    public void markAsRead(UserDetailsImpl currentUser, UUID notificationId){
-       Notification notification = notificationRepository
+    public void markAsRead(UserDetailsImpl currentUser, UUID notificationId) {
+        Notification notification = notificationRepository
                 .findById(notificationId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Notification not found: " + notificationId));
@@ -102,24 +99,19 @@ public class NotificationServiceImpl implements  NotificationService{
 
         notification.setRead(true);
         notificationRepository.save(notification);
-        }
+    }
 
     @Override
     @Transactional
-    public void markAllAsRead(UserDetailsImpl currentUser){
+    public void markAllAsRead(UserDetailsImpl currentUser) {
         User user = getUserById(currentUser.getId());
         notificationRepository.markAllAsRead(user);
-        log.debug("All notification marked as read for user '{}' " , user.getEmail());
+        log.debug("All notification marked as read for user '{}' ", user.getEmail());
     }
 
-    private User getUserById(UUID userId){
-      return userRepository.findById(userId)
-                        .orElseThrow(()-> new ResourceNotFoundException("User not found: " + userId));
+    private User getUserById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
     }
 
-    
-    
 }
-
-
-

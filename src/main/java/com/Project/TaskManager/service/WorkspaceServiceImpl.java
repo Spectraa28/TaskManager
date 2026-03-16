@@ -24,79 +24,70 @@ import com.Project.TaskManager.repository.UserRepository;
 import com.Project.TaskManager.repository.WorkspaceMemberRepository;
 import com.Project.TaskManager.repository.WorkspaceRepository;
 
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WorkspaceServiceImpl implements WorkspaceService{
-    
+public class WorkspaceServiceImpl implements WorkspaceService {
+
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
-    
-    
-    
+
     @Override
     @Transactional
     public WorkspaceResponse createWorkspace(CreateWorkspaceRequest request, UUID userId) {
-        
-        //validate slug is not taken 
-        if(workspaceRepository.existsBySlugAndArchivedFalse(request.getSlug())){
+
+        // validate slug is not taken
+        if (workspaceRepository.existsBySlugAndArchivedFalse(request.getSlug())) {
             throw new BadRequestException("Slug is already in use" + request.getSlug());
         }
 
-        //Load the user
-        User owner = userRepository.findById(userId).
-                    orElseThrow(()-> new ResourceNotFoundException("User not found"));
-    
-    
+        // Load the user
+        User owner = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        //Build and save workspace
+        // Build and save workspace
         Workspace workspace = Workspace.builder()
-                                        .name(request.getName())
-                                        .description(request.getDescription())
-                                        .slug(request.getSlug())
-                                        .owner(owner)
-                                        .archived(false)
-                                        .build();
+                .name(request.getName())
+                .description(request.getDescription())
+                .slug(request.getSlug())
+                .owner(owner)
+                .archived(false)
+                .build();
         Workspace saved = workspaceRepository.save(workspace);
 
         // Auto add creater as ADmin member
         WorkspaceMember member = WorkspaceMember.builder()
-                                            .workspace(workspace)
-                                            .user(owner)
-                                            .role(WorkspaceRole.ADMIN)
-                                            .build();
+                .workspace(workspace)
+                .user(owner)
+                .role(WorkspaceRole.ADMIN)
+                .build();
 
         workspaceMemberRepository.save(member);
 
-        log.info("Workspace created : {} by user: {}"
-            , saved.getSlug(), owner.getEmail()
-        );
+        log.info("Workspace created : {} by user: {}", saved.getSlug(), owner.getEmail());
 
-        return mapToResponse(saved, WorkspaceRole.ADMIN,1);
-}
+        return mapToResponse(saved, WorkspaceRole.ADMIN, 1);
+    }
 
     @Override
     @Transactional(readOnly = true)
     public WorkspaceResponse getWorkspaceBySlug(String slug, UUID userId) {
         Workspace workspace = workspaceRepository
-                            .findBySlugAndArchivedFalse(slug)
-                            .orElseThrow(()-> new ResourceNotFoundException("Workspace not found: "+ slug));
-        
+                .findBySlugAndArchivedFalse(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found: " + slug));
+
         User user = userRepository.findById(userId)
-                                    .orElseThrow(()-> new ResourceNotFoundException("User not Found :"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not Found :"));
 
-        //check Membership
+        // check Membership
         WorkspaceMember member = workspaceMemberRepository
-                                    .findByWorkspaceAndUser(workspace, user)
-                                    .orElseThrow(()-> new UnauthorizedException("YOu are not a member of this workspace"));
+                .findByWorkspaceAndUser(workspace, user)
+                .orElseThrow(() -> new UnauthorizedException("YOu are not a member of this workspace"));
 
-    
-       int memberCount = workspaceMemberRepository
+        int memberCount = workspaceMemberRepository
                 .countByWorkspace(workspace);
 
         return mapToResponse(workspace, member.getRole(), memberCount);
@@ -105,109 +96,98 @@ public class WorkspaceServiceImpl implements WorkspaceService{
     @Override
     @Transactional
     public WorkspaceResponse updatedWorkspace(UUID workspaceId, CreateWorkspaceRequest request, UUID userId) {
-     Workspace workspace = workspaceRepository
-                                        .findById(workspaceId)
-                                        .orElseThrow(()->new ResourceNotFoundException("Workspace not found"));
-    
-     User user = userRepository.findById(userId).orElseThrow(()->
-                             new ResourceNotFoundException("User not found"));
-    //ONly Admin can update                    
-    validateAdminRole(workspace, user);
+        Workspace workspace = workspaceRepository
+                .findById(workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-
-    //  check slug not taken by another workspace
-    if(!workspace.getSlug().equals(request.getSlug()) && workspaceRepository.existsBySlugAndArchivedFalse(request.getSlug())){
-        throw new BadRequestException(
-            "Slug already in use : " + request.getSlug()
-        );
-    }
-
-    workspace.setName(request.getName());
-    workspace.setDescription(request.getDescription());
-    workspace.setSlug(request.getSlug());
-
-    Workspace updated  = workspaceRepository.save(workspace);
-
-    int memberCount = workspaceMemberRepository.countByWorkspace(updated);
-
-    log.info("Workspace updated: {}", updated.getSlug());
-
-    return mapToResponse(updated, WorkspaceRole.ADMIN, memberCount);
-    }
-
-
-     @Override
-     @Transactional
-    public void deleteWorkspace(UUID workspaceId, UUID userId) {
-    
-        Workspace workspace = workspaceRepository.findById(workspaceId).orElseThrow(
-            ()-> new ResourceNotFoundException("Workspace not found")
-        );
-
-        User user = userRepository.findById(userId).orElseThrow(
-            ()-> new ResourceNotFoundException("User not found")
-        );
-
-        //Only Admin can delete
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        // ONly Admin can update
         validateAdminRole(workspace, user);
 
-        //Soft delete 
+        // check slug not taken by another workspace
+        if (!workspace.getSlug().equals(request.getSlug())
+                && workspaceRepository.existsBySlugAndArchivedFalse(request.getSlug())) {
+            throw new BadRequestException(
+                    "Slug already in use : " + request.getSlug());
+        }
+
+        workspace.setName(request.getName());
+        workspace.setDescription(request.getDescription());
+        workspace.setSlug(request.getSlug());
+
+        Workspace updated = workspaceRepository.save(workspace);
+
+        int memberCount = workspaceMemberRepository.countByWorkspace(updated);
+
+        log.info("Workspace updated: {}", updated.getSlug());
+
+        return mapToResponse(updated, WorkspaceRole.ADMIN, memberCount);
+    }
+
+    @Override
+    @Transactional
+    public void deleteWorkspace(UUID workspaceId, UUID userId) {
+
+        Workspace workspace = workspaceRepository.findById(workspaceId).orElseThrow(
+                () -> new ResourceNotFoundException("Workspace not found"));
+
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("User not found"));
+
+        // Only Admin can delete
+        validateAdminRole(workspace, user);
+
+        // Soft delete
         workspace.setArchived(true);
         workspaceRepository.save(workspace);
 
         log.info("Workspace archived: {} by user : {}",
-                    workspace.getSlug(), user.getEmail()
-                        );  
-    
+                workspace.getSlug(), user.getEmail());
+
     }
-    
 
     @Override
-@Transactional(readOnly = true)
-public List<WorkspaceMemberResponse> getWorkspaceMembers(UUID workspaceId, UUID userId) {
-    Workspace workspace = workspaceRepository.findByIdAndArchivedFalse(workspaceId)
-            .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+    @Transactional(readOnly = true)
+    public List<WorkspaceMemberResponse> getWorkspaceMembers(UUID workspaceId, UUID userId) {
+        Workspace workspace = workspaceRepository.findByIdAndArchivedFalse(workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-    // Verify requester is a member
-    User requester = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        // Verify requester is a member
+        User requester = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-    if (!workspaceMemberRepository.existsByWorkspaceAndUser(workspace, requester)) {
-        throw new UnauthorizedException("You are not a member of this workspace");
+        if (!workspaceMemberRepository.existsByWorkspaceAndUser(workspace, requester)) {
+            throw new UnauthorizedException("You are not a member of this workspace");
+        }
+
+        return workspaceMemberRepository.findByWorkspace(workspace)
+                .stream()
+                .map(member -> WorkspaceMemberResponse.builder()
+                        .id(member.getId())
+                        .userId(member.getUser().getId())
+                        .fullName(member.getUser().getFullName())
+                        .email(member.getUser().getEmail())
+                        .role(member.getRole())
+                        .joinedAt(member.getCreatedAt())
+                        .build())
+                .toList();
     }
 
-    return workspaceMemberRepository.findByWorkspace(workspace)
-            .stream()
-            .map(member -> WorkspaceMemberResponse.builder()
-                    .id(member.getId())
-                    .userId(member.getUser().getId())
-                    .fullName(member.getUser().getFullName())
-                    .email(member.getUser().getEmail())
-                    .role(member.getRole())
-                    .joinedAt(member.getCreatedAt())
-                    .build())
-            .toList();
-}
-    
-    
-    
     @Override
     @Transactional(readOnly = true)
     public Page<WorkspaceResponse> getMyWorkspaces(UUID userId, Pageable pageable) {
-    
-      User user = userRepository.findById(userId)
+
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found"
-                ));
+                        "User not found"));
 
         return workspaceRepository
                 .findAllByMemberOrOwner(user, pageable)
                 .map(workspace -> {
-                    WorkspaceMember member =
-                            workspaceMemberRepository
-                                    .findByWorkspaceAndUser(
-                                            workspace, user)
-                                    .orElse(null);
+                    WorkspaceMember member = workspaceMemberRepository
+                            .findByWorkspaceAndUser(
+                                    workspace, user)
+                            .orElse(null);
 
                     WorkspaceRole role = member != null
                             ? member.getRole()
@@ -220,42 +200,36 @@ public List<WorkspaceMemberResponse> getWorkspaceMembers(UUID workspaceId, UUID 
                 });
     }
 
-
-
     @Override
     @Transactional
     public WorkspaceResponse inviteMember(UUID workspaceId, InviteMemberRequest request, UUID userID) {
         Workspace workspace = workspaceRepository.findById(workspaceId).orElseThrow(
-            ()-> new ResourceNotFoundException("Workspace not found")
-        );
+                () -> new ResourceNotFoundException("Workspace not found"));
 
         User inviter = userRepository.findById(userID).orElseThrow(
-            ()-> new ResourceNotFoundException("user not Found")
-        );
+                () -> new ResourceNotFoundException("user not Found"));
 
         validateAdminRole(workspace, inviter);
 
         User invitee = userRepository.findByEmail(request.getEmail()).orElseThrow(
-            ()-> new ResourceNotFoundException("User not found with email: " + request.getEmail())
-        );
+                () -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
-        if(workspaceMemberRepository.existsByWorkspaceAndUser(workspace, invitee)){
+        if (workspaceMemberRepository.existsByWorkspaceAndUser(workspace, invitee)) {
             throw new BadRequestException("User is already a member in this workspace");
         }
 
         WorkspaceMember member = WorkspaceMember.builder()
-                                                .workspace(workspace)
-                                                .user(invitee)
-                                                .role(request.getRole())
-                                                .build();
+                .workspace(workspace)
+                .user(invitee)
+                .role(request.getRole())
+                .build();
 
         workspaceMemberRepository.save(member);
 
         log.info("User {} inted to workspace {} with role {}",
-            invitee.getEmail(),
-            workspace.getSlug(),
-            request.getRole()
-        );
+                invitee.getEmail(),
+                workspace.getSlug(),
+                request.getRole());
 
         int memberCount = workspaceMemberRepository.countByWorkspace(workspace);
 
@@ -263,51 +237,40 @@ public List<WorkspaceMemberResponse> getWorkspaceMembers(UUID workspaceId, UUID 
 
     }
 
-
-
-
     @Override
     @Transactional
     public void removeMember(UUID workspaceId, UUID memeberId, UUID userID) {
-    Workspace workspace = workspaceRepository.findById(workspaceId).orElseThrow(
-            ()-> new ResourceNotFoundException("Workspace not found")
-        );
+        Workspace workspace = workspaceRepository.findById(workspaceId).orElseThrow(
+                () -> new ResourceNotFoundException("Workspace not found"));
 
         User requester = userRepository.findById(userID).orElseThrow(
-            ()-> new ResourceNotFoundException("user not Found")
-        );
+                () -> new ResourceNotFoundException("user not Found"));
 
         validateAdminRole(workspace, requester);
 
         User memberToRemove = userRepository.findById(memeberId).orElseThrow(
-            ()-> new ResourceNotFoundException("User not found")
-        );
+                () -> new ResourceNotFoundException("User not found"));
 
-        if(workspace.getOwner().getId().equals(memberToRemove)){
+        if (workspace.getOwner().getId().equals(memberToRemove.getId())) {
             throw new BadRequestException("Cannot remove the workspace owner");
         }
 
         workspaceMemberRepository.deleteByWorkspaceAndUser(workspace, memberToRemove);
-        
+
         log.info("USer {} removed from workspace {} by {}", memberToRemove.getEmail(),
-    workspace.getSlug(),
-requester.getEmail());
-    
+                workspace.getSlug(),
+                requester.getEmail());
+
     }
-
-
-
 
     private void validateAdminRole(Workspace workspace, User user) {
         boolean isAdmin = workspaceMemberRepository
                 .existsByWorkspaceAndUserAndRole(
-                        workspace, user, WorkspaceRole.ADMIN
-                );
+                        workspace, user, WorkspaceRole.ADMIN);
 
         if (!isAdmin) {
             throw new UnauthorizedException(
-                    "Only ADMINs can perform this action"
-            );
+                    "Only ADMINs can perform this action");
         }
     }
 
@@ -331,7 +294,5 @@ requester.getEmail());
                 .updatedAt(workspace.getUpdatedAt())
                 .build();
     }
-
-
 
 }

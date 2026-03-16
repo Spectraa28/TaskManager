@@ -13,25 +13,22 @@ import com.Project.TaskManager.model.Workspace;
 import com.Project.TaskManager.model.WorkspaceMember;
 
 @Repository
-public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember,UUID>{
+public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember, UUID> {
 
     Optional<WorkspaceMember> findByWorkspaceAndUser(
-                Workspace workspace, User user
-    );
+            Workspace workspace, User user);
 
+    @org.springframework.data.jpa.repository.Query("SELECT wm FROM WorkspaceMember wm JOIN FETCH wm.user WHERE wm.workspace = :workspace")
     List<WorkspaceMember> findByWorkspace(
-        Workspace workspace
-    );
+            @org.springframework.data.repository.query.Param("workspace") Workspace workspace);
 
     boolean existsByWorkspaceAndUser(
-        Workspace workspace, User user
-    );
+            Workspace workspace, User user);
 
     boolean existsByWorkspaceAndUserAndRole(
-        Workspace workspace,
-        User user,
-        WorkspaceRole role
-    );
+            Workspace workspace,
+            User user,
+            WorkspaceRole role);
 
     void deleteByWorkspaceAndUser(Workspace workspace, User user);
 
@@ -39,5 +36,4 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
 
     long countByUser(User currentUser);
 
-    
 }

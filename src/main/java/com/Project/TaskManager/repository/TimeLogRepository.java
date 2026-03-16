@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.Project.TaskManager.model.Task;
@@ -13,17 +14,16 @@ import com.Project.TaskManager.model.TimeLog;
 import com.Project.TaskManager.model.User;
 
 @Repository
-public interface TimeLogRepository extends JpaRepository<TimeLog, UUID>{
-    
+public interface TimeLogRepository extends JpaRepository<TimeLog, UUID> {
 
-    Page<TimeLog> findAllByTask(Task task,Pageable pageable);
+    Page<TimeLog> findAllByTask(Task task, Pageable pageable);
 
     Page<TimeLog> findAllByTaskAndUser(Task task, User user, Pageable pageable);
 
     @Query("SELECT COALESCE(SUM(t.minutesSpent), 0) FROM TimeLog t WHERE t.task = :task")
-    Integer findTotalMinutesByTask(Task task);
+    Integer findTotalMinutesByTask(@Param("task") Task task);
 
     @Query("SELECT COALESCE(SUM(t.minutesSpent), 0) FROM TimeLog t " +
-           "WHERE t.task = :task AND t.user = :user")
-    Integer findTotalMinutesByTaskAndUser(Task task, User user);
+            "WHERE t.task = :task AND t.user = :user")
+    Integer findTotalMinutesByTaskAndUser(@Param("task") Task task, @Param("user") User user);
 }

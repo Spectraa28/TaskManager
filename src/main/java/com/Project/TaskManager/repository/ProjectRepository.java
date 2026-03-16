@@ -17,55 +17,55 @@ import com.Project.TaskManager.model.Workspace;
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, UUID> {
 
-    @Query("SELECT p FROM Project p WHERE p.workspace = :workspace AND p.archived = false")
-    Page<Project> findAllByWorkspace(Workspace workspace, Pageable pageable);
+        @Query("SELECT p FROM Project p WHERE p.workspace = :workspace AND p.archived = false")
+        Page<Project> findAllByWorkspace(@Param("workspace") Workspace workspace, Pageable pageable);
 
-    // Only find active projects by key
-    @Query("SELECT p FROM Project p WHERE p.workspace = :workspace AND p.key = :key AND p.archived = false")
-    Optional<Project> findByWorkspaceAndKey(Workspace workspace, String key);
+        // Only find active projects by key
+        @Query("SELECT p FROM Project p WHERE p.workspace = :workspace AND p.key = :key AND p.archived = false")
+        Optional<Project> findByWorkspaceAndKey(@Param("workspace") Workspace workspace, @Param("key") String key);
 
-    // Only check active projects for duplicate key
-    @Query("SELECT COUNT(p) > 0 FROM Project p WHERE p.workspace = :workspace AND p.key = :key AND p.archived = false")
-    boolean existsByWorkspaceAndKey(Workspace workspace, String key);
+        // Only check active projects for duplicate key
+        @Query("SELECT COUNT(p) > 0 FROM Project p WHERE p.workspace = :workspace AND p.key = :key AND p.archived = false")
+        boolean existsByWorkspaceAndKey(@Param("workspace") Workspace workspace, @Param("key") String key);
 
-    // Archived projects list
-    @Query("SELECT p FROM Project p WHERE p.workspace = :workspace AND p.archived = true")
-    Page<Project> findAllArchivedByWorkspace(Workspace workspace, Pageable pageable);
+        // Archived projects list
+        @Query("SELECT p FROM Project p WHERE p.workspace = :workspace AND p.archived = true")
+        Page<Project> findAllArchivedByWorkspace(@Param("workspace") Workspace workspace, Pageable pageable);
 
-    // ─── Search ───────────────────────────────────────────────────────
-    @Query("""
-            SELECT p FROM Project p
-            JOIN p.members pm
-            WHERE pm.user.id = :userId
-            AND LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-            AND p.archived = false
-            ORDER BY p.createdAt DESC
-            """)
-    List<Project> searchByNameForUser(@Param("userId") UUID userId,
-                                       @Param("keyword") String keyword);
+        // ─── Search ───────────────────────────────────────────────────────
+        @Query("""
+                        SELECT p FROM Project p
+                        JOIN p.members pm
+                        WHERE pm.user.id = :userId
+                        AND LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                        AND p.archived = false
+                        ORDER BY p.createdAt DESC
+                        """)
+        List<Project> searchByNameForUser(@Param("userId") UUID userId,
+                        @Param("keyword") String keyword);
 
-    // ─── Dashboard — User Stats ───────────────────────────────────────
-    @Query("""
-            SELECT COUNT(p) FROM Project p
-            JOIN p.members pm
-            WHERE pm.user.id = :userId
-            AND p.archived = false
-            """)
-    long countProjectsForUser(@Param("userId") UUID userId);
+        // ─── Dashboard — User Stats ───────────────────────────────────────
+        @Query("""
+                        SELECT COUNT(p) FROM Project p
+                        JOIN p.members pm
+                        WHERE pm.user.id = :userId
+                        AND p.archived = false
+                        """)
+        long countProjectsForUser(@Param("userId") UUID userId);
 
-    // ─── Dashboard — Workspace Stats ─────────────────────────────────
-    @Query("""
-            SELECT COUNT(p) FROM Project p
-            WHERE p.workspace.id = :workspaceId
-            AND p.archived = false
-            """)
-    long countProjectsInWorkspace(@Param("workspaceId") UUID workspaceId);
+        // ─── Dashboard — Workspace Stats ─────────────────────────────────
+        @Query("""
+                        SELECT COUNT(p) FROM Project p
+                        WHERE p.workspace.id = :workspaceId
+                        AND p.archived = false
+                        """)
+        long countProjectsInWorkspace(@Param("workspaceId") UUID workspaceId);
 
-    @Query("""
-            SELECT p FROM Project p
-            WHERE p.workspace.id = :workspaceId
-            AND p.archived = false
-            ORDER BY p.createdAt DESC
-            """)
-    List<Project> findAllByWorkspaceId(@Param("workspaceId") UUID workspaceId);
+        @Query("""
+                        SELECT p FROM Project p
+                        WHERE p.workspace.id = :workspaceId
+                        AND p.archived = false
+                        ORDER BY p.createdAt DESC
+                        """)
+        List<Project> findAllByWorkspaceId(@Param("workspaceId") UUID workspaceId);
 }

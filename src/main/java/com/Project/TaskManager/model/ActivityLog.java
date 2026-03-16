@@ -14,11 +14,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ActivityLog extends BaseEntity{
-    
+public class ActivityLog extends BaseEntity {
+
     @Column(nullable = false)
     private String action;
-
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
@@ -29,10 +28,9 @@ public class ActivityLog extends BaseEntity{
     @Column
     private String newValue;
 
-   @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-@JoinColumn(name = "task_id", nullable = false)
-private Task task;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "task_id", nullable = false)
+    private Task task;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "actor_id", nullable = false)

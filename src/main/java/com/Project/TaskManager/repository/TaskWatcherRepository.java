@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.Project.TaskManager.model.Task;
@@ -13,16 +14,16 @@ import com.Project.TaskManager.model.TaskWatcher;
 import com.Project.TaskManager.model.User;
 
 @Repository
-public interface TaskWatcherRepository  extends JpaRepository<TaskWatcher,UUID>{
-    
-    boolean existsByTaskAndUser(Task task,User user);
+public interface TaskWatcherRepository extends JpaRepository<TaskWatcher, UUID> {
 
-    Optional<TaskWatcher> findByTaskAndUser(Task task,User user);
+    boolean existsByTaskAndUser(Task task, User user);
+
+    Optional<TaskWatcher> findByTaskAndUser(Task task, User user);
 
     long countByTask(Task task);
 
     @Query("SELECT tw FROM TaskWatcher tw " +
-       "JOIN FETCH tw.user " +
-       "WHERE tw.task = :task")
-    List<TaskWatcher> findAllByTask(Task task);
+            "JOIN FETCH tw.user " +
+            "WHERE tw.task = :task")
+    List<TaskWatcher> findAllByTask(@Param("task") Task task);
 }

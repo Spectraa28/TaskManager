@@ -33,57 +33,53 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SprintServiceImpl implements SprintService{
-    
+public class SprintServiceImpl implements SprintService {
+
     private final SprintRepository sprintRepository;
     private final ProjectRepository projectRepository;
     private final WorkspaceRepository workspaceRepository;
-    private final WorkspaceMemberRepository  workspaceMemberRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
 
-    // Create Sprint 
-    @RequiresWorkspaceRole(WorkspaceRole.MANAGER) 
+    // Create Sprint
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
     @Override
     @Transactional
-    public SprintResponse createSprint(UserDetailsImpl currentUser, UUID projectId, CreateSprintRequest request){
+    public SprintResponse createSprint(UserDetailsImpl currentUser, UUID projectId, CreateSprintRequest request) {
 
         Project project = getProjectById(projectId);
 
-
-        if(!request.getEndDate().isAfter(request.getStartDate())){
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
             throw new BadRequestException("End date must be after start date");
         }
 
-        Sprint  sprint = Sprint.builder()
-                    .name(request.getName())
-                    .goal(request.getGoal())
-                    .startDate(request.getStartDate())
-                    .endDate(request.getEndDate())
-                    .status(SprintStatus.PLANNED)
-                    .project(project)
-                    .build();
+        Sprint sprint = Sprint.builder()
+                .name(request.getName())
+                .goal(request.getGoal())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .status(SprintStatus.PLANNED)
+                .project(project)
+                .build();
 
-                    Sprint saved = sprintRepository.save(sprint);
+        Sprint saved = sprintRepository.save(sprint);
 
-                    log.info("Sprint '{}' created in project '{}' by '{}'",
-                        saved.getName(),project.getKey(),currentUser.getEmail()
-                    );
+        log.info("Sprint '{}' created in project '{}' by '{}'",
+                saved.getName(), project.getKey(), currentUser.getEmail());
 
         return SprintResponse.from(saved);
     }
 
-    //Read    
+    // Read
 
     @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
     @Override
     @Transactional
     public Page<SprintResponse> getSprintByProject(UserDetailsImpl currentUser, UUID projectid, Pageable pageable) {
-            Project project = getProjectById(projectid);
+        Project project = getProjectById(projectid);
 
-
-            return sprintRepository.findAllByProject(project, pageable).map(SprintResponse::from);
+        return sprintRepository.findAllByProject(project, pageable).map(SprintResponse::from);
     }
-
 
     // Update
     @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
@@ -91,42 +87,37 @@ public class SprintServiceImpl implements SprintService{
     @Transactional
     public SprintResponse updateSprint(UserDetailsImpl currentUser, UUID projectid, UUID sprintId,
             CreateSprintRequest request) {
-    
-                Project project = getProjectById(projectid);
 
+        Project project = getProjectById(projectid);
 
-                Sprint sprint = getSprintByIdAndProject(sprintId, project);
+        Sprint sprint = getSprintByIdAndProject(sprintId, project);
 
-                if(sprint.getStatus() != SprintStatus.PLANNED){
-                    throw new BadRequestException("Only Planned Sprints can be Updated. " + "Current Status: "+ sprint.getStartDate() );
-                }
+        if (sprint.getStatus() != SprintStatus.PLANNED) {
+            throw new BadRequestException("Only Planned Sprints can be Updated. Current Status: " + sprint.getStatus());
+        }
 
-                if(!request.getEndDate().isAfter(request.getStartDate())){
-                    throw new BadRequestException("ENd date must be after start date");
-                }
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
+            throw new BadRequestException("ENd date must be after start date");
+        }
 
-                sprint.setName(request.getName());
-                sprint.setGoal(request.getGoal());
-                sprint.setStartDate(request.getStartDate());
-                sprint.setEndDate(request.getEndDate());
+        sprint.setName(request.getName());
+        sprint.setGoal(request.getGoal());
+        sprint.setStartDate(request.getStartDate());
+        sprint.setEndDate(request.getEndDate());
 
-                Sprint updated = sprintRepository.save(sprint);
+        Sprint updated = sprintRepository.save(sprint);
 
-                log.info("Sprint '{}' updated by '{}'", updated.getName(), currentUser.getEmail());
+        log.info("Sprint '{}' updated by '{}'", updated.getName(), currentUser.getEmail());
 
-                return SprintResponse.from(updated);
-            }
-
-
-
+        return SprintResponse.from(updated);
+    }
 
     // Start sprint _________
-    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)        
+    @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
     @Override
     @Transactional
     public SprintResponse startSprint(UserDetailsImpl currentUser, UUID projectid, UUID sprintId) {
-    Project project = getProjectById(projectid);
-
+        Project project = getProjectById(projectid);
 
         Sprint sprint = getSprintByIdAndProject(sprintId, project);
 
@@ -134,7 +125,7 @@ public class SprintServiceImpl implements SprintService{
         if (sprint.getStatus() != SprintStatus.PLANNED) {
             throw new BadRequestException(
                     "Only PLANNED sprints can be started. " +
-                    "Current status: " + sprint.getStatus());
+                            "Current status: " + sprint.getStatus());
         }
 
         // Only one ACTIVE sprint per project at a time
@@ -142,7 +133,7 @@ public class SprintServiceImpl implements SprintService{
                 project, SprintStatus.ACTIVE)) {
             throw new BadRequestException(
                     "Project already has an active sprint. " +
-                    "Complete it before starting a new one");
+                            "Complete it before starting a new one");
         }
 
         sprint.setStatus(SprintStatus.ACTIVE);
@@ -160,8 +151,7 @@ public class SprintServiceImpl implements SprintService{
     @Override
     @Transactional
     public SprintResponse completeSprint(UserDetailsImpl currentUser, UUID projectid, UUID sprintId) {
-      Project project = getProjectById(projectid);
-
+        Project project = getProjectById(projectid);
 
         Sprint sprint = getSprintByIdAndProject(sprintId, project);
 
@@ -169,7 +159,7 @@ public class SprintServiceImpl implements SprintService{
         if (sprint.getStatus() != SprintStatus.ACTIVE) {
             throw new BadRequestException(
                     "Only ACTIVE sprints can be completed. " +
-                    "Current status: " + sprint.getStatus());
+                            "Current status: " + sprint.getStatus());
         }
 
         sprint.setStatus(SprintStatus.COMPLETED);
@@ -178,32 +168,32 @@ public class SprintServiceImpl implements SprintService{
         log.info("Sprint '{}' completed in project '{}' by '{}'",
                 completed.getName(), project.getKey(), currentUser.getEmail());
 
-        return SprintResponse.from(completed); }
-
-    // helpers
-    private Project getProjectById(UUID projectId){
-        return projectRepository.findById(projectId).
-                    orElseThrow(()-> new ResourceNotFoundException("Project not found: " + projectId));
+        return SprintResponse.from(completed);
     }
 
-    private Sprint getSprintByIdAndProject(UUID sprintId  , Project project){
-        Sprint sprint = sprintRepository.findById(sprintId)
-                        .orElseThrow(()-> new ResourceNotFoundException("Sprint not found: "+ sprintId));
+    // helpers
+    private Project getProjectById(UUID projectId) {
+        return projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + projectId));
+    }
 
-        if(!sprint.getProject().getId().equals(project.getId())){
+    private Sprint getSprintByIdAndProject(UUID sprintId, Project project) {
+        Sprint sprint = sprintRepository.findById(sprintId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found: " + sprintId));
+
+        if (!sprint.getProject().getId().equals(project.getId())) {
             throw new ResourceNotFoundException("Sprint not found in this project");
 
         }
 
         return sprint;
-    
-    }
-    
-    private User getUserById(UUID userId){
-            return userRepository.findById(userId)
-                                .orElseThrow(()-> new ResourceNotFoundException("User not found: "+ userId));
-        
+
     }
 
-    
+    private User getUserById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+    }
+
 }

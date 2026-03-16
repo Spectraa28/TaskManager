@@ -39,367 +39,348 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class TaskServiceImpl implements TaskService{
+public class TaskServiceImpl implements TaskService {
 
-    private final TaskRepository taskRepository;
-    private final ProjectRepository projectRepository;
-    private final SprintRepository sprintRepository;
-    private final WorkspaceRepository workspaceRepository;
-    private final WorkspaceMemberRepository workspaceMemberRepository;
-    private final UserRepository userRepository;
-    private final ActivityLogService activityLogService;
-    private final WebSocketService webSocketService;
-    private final RabbitTemplate rabbitTemplate;
+        private final TaskRepository taskRepository;
+        private final ProjectRepository projectRepository;
+        private final SprintRepository sprintRepository;
+        private final WorkspaceRepository workspaceRepository;
+        private final WorkspaceMemberRepository workspaceMemberRepository;
+        private final UserRepository userRepository;
+        private final ActivityLogService activityLogService;
+        private final WebSocketService webSocketService;
+        private final RabbitTemplate rabbitTemplate;
 
+        @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
+        @Override
+        @Transactional
+        public TaskResponse createTask(UserDetailsImpl currentUser,
+                        UUID projectId,
+                        CreateTaskRequest request) {
 
+                Project project = getProjectById(projectId);
 
-    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
-    @Override
-    @Transactional
-    public TaskResponse createTask(UserDetailsImpl currentUser,
-                                   UUID projectId,
-                                   CreateTaskRequest request) {
+                // Any workspace member can create a task
 
-        Project project = getProjectById(projectId);
+                User reporter = getUserById(currentUser.getId());
 
-        // Any workspace member can create a task
+                // Generate task key — e.g. "BACK-1", "BACK-2"
+                int nextSequence = taskRepository
+                                .findMaxSequenceNumberByProject(project) + 1;
+                String taskKey = project.getKey() + "-" + nextSequence;
 
-        User reporter = getUserById(currentUser.getId());
+                // Resolve sprint if provided
+                Sprint sprint = null;
+                if (request.getSprintId() != null) {
+                        sprint = sprintRepository.findById(request.getSprintId())
+                                        .orElseThrow(() -> new ResourceNotFoundException(
+                                                        "Sprint not found: " + request.getSprintId()));
 
-        // Generate task key — e.g. "BACK-1", "BACK-2"
-        int nextSequence = taskRepository
-                .findMaxSequenceNumberByProject(project) + 1;
-        String taskKey = project.getKey() + "-" + nextSequence;
+                        // Sprint must belong to the same project
+                        if (!sprint.getProject().getId().equals(project.getId())) {
+                                throw new BadRequestException(
+                                                "Sprint does not belong to this project");
+                        }
+                }
 
-        // Resolve sprint if provided
-        Sprint sprint = null;
-        if (request.getSprintId() != null) {
-            sprint = sprintRepository.findById(request.getSprintId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Sprint not found: " + request.getSprintId()));
+                // Resolve assignee if provided
+                User assignee = null;
+                if (request.getAssigneeId() != null) {
+                        assignee = getUserById(request.getAssigneeId());
 
-            // Sprint must belong to the same project
-            if (!sprint.getProject().getId().equals(project.getId())) {
-                throw new BadRequestException(
-                        "Sprint does not belong to this project");
-            }
+                        // Assignee must be a member of the workspace
+                }
+
+                Task task = Task.builder()
+                                .taskKey(taskKey)
+                                .title(request.getTitle())
+                                .description(request.getDescription())
+                                .status(TaskStatus.TODO)
+                                .priority(request.getPriority())
+                                .type(request.getType())
+                                .project(project)
+                                .sprint(sprint)
+                                .reporter(reporter)
+                                .assignee(assignee)
+                                .storyPoints(request.getStoryPoints())
+                                .sequenceNumber(nextSequence)
+                                .build();
+
+                Task saved = taskRepository.save(task);
+                taskRepository.flush();
+
+                activityLogService.log(
+                                saved,
+                                reporter,
+                                "TASK_CREATED",
+                                reporter.getFullName() + " created task " + saved.getTaskKey());
+
+                publishNotificationEvent(
+                                saved,
+                                reporter,
+                                NotificationType.TASK_UPDATED,
+                                reporter.getFullName() + " created task " + saved.getTaskKey(),
+                                null);
+
+                log.info("Task '{}' created in project '{}' by '{}'",
+                                taskKey, project.getKey(), reporter.getEmail());
+
+                return TaskResponse.from(saved);
         }
 
-        // Resolve assignee if provided
-        User assignee = null;
-        if (request.getAssigneeId() != null) {
-            assignee = getUserById(request.getAssigneeId());
+        // ─── Read ───────────────────────────────────────────────────────────────
 
-            // Assignee must be a member of the workspace
+        @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
+        @Override
+        @Transactional
+        public Page<TaskResponse> getTasksByProject(UserDetailsImpl currentUser,
+                        UUID projectId,
+                        Pageable pageable) {
+
+                Project project = getProjectById(projectId);
+
+                return taskRepository.findAllByProjectAndArchivedFalse(project, pageable)
+                                .map(TaskResponse::from);
         }
 
-        Task task = Task.builder()
-                .taskKey(taskKey)
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .status(TaskStatus.TODO)
-                .priority(request.getPriority())
-                .type(request.getType())
-                .project(project)
-                .sprint(sprint)
-                .reporter(reporter)
-                .assignee(assignee)
-                .storyPoints(request.getStoryPoints())
-                .sequenceNumber(nextSequence)
-                .build();
+        @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
+        @Override
+        @Transactional
+        public TaskResponse getTaskById(UserDetailsImpl currentUser,
+                        UUID projectId,
+                        UUID taskId) {
 
-        Task saved = taskRepository.save(task);
-        taskRepository.flush();
+                Project project = getProjectById(projectId);
 
-        activityLogService.log(
-        saved,
-        reporter,
-        "TASK_CREATED",
-        reporter.getFullName() + " created task " + saved.getTaskKey());
+                Task task = getTaskByIdAndProject(taskId, project);
 
-       publishNotificationEvent(
-        saved,
-        reporter,
-        NotificationType.TASK_UPDATED,
-        reporter.getFullName() + " created task " + saved.getTaskKey(),
-        null);
-
-        log.info("Task '{}' created in project '{}' by '{}'",
-                taskKey, project.getKey(), reporter.getEmail());
-
-        return TaskResponse.from(saved);
-    }
-
-    // ─── Read ───────────────────────────────────────────────────────────────
-
-    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
-    @Override
-    @Transactional
-    public Page<TaskResponse> getTasksByProject(UserDetailsImpl currentUser,
-                                                UUID projectId,
-                                                Pageable pageable) {
-
-        Project project = getProjectById(projectId);
-
-        return taskRepository.findAllByProject(project, pageable)
-                .map(TaskResponse::from);
-    }
-
-    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
-    @Override
-    @Transactional
-    public TaskResponse getTaskById(UserDetailsImpl currentUser,
-                                    UUID projectId,
-                                    UUID taskId) {
-
-        Project project = getProjectById(projectId);
-
-        Task task = getTaskByIdAndProject(taskId, project);
-
-        return TaskResponse.from(task);
-    }
-
-    // ─── Update ─────────────────────────────────────────────────────────────
-
-    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
-    @Override
-    @Transactional
-    public TaskResponse updateTask(UserDetailsImpl currentUser,
-                                   UUID projectId,
-                                   UUID taskId,
-                                   CreateTaskRequest request) {
-
-        Project project = getProjectById(projectId);
-
-        Task task = getTaskByIdAndProject(taskId, project);
-
-        // Resolve sprint if provided
-        Sprint sprint = null;
-        if (request.getSprintId() != null) {
-            sprint = sprintRepository.findById(request.getSprintId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Sprint not found: " + request.getSprintId()));
-
-            if (!sprint.getProject().getId().equals(project.getId())) {
-                throw new BadRequestException(
-                        "Sprint does not belong to this project");
-            }
+                return TaskResponse.from(task);
         }
 
-        // Resolve assignee if provided
-        User assignee = null;
-        if (request.getAssigneeId() != null) {
-            assignee = getUserById(request.getAssigneeId());
+        // ─── Update ─────────────────────────────────────────────────────────────
+
+        @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
+        @Override
+        @Transactional
+        public TaskResponse updateTask(UserDetailsImpl currentUser,
+                        UUID projectId,
+                        UUID taskId,
+                        CreateTaskRequest request) {
+
+                Project project = getProjectById(projectId);
+
+                Task task = getTaskByIdAndProject(taskId, project);
+
+                // Resolve sprint if provided
+                Sprint sprint = null;
+                if (request.getSprintId() != null) {
+                        sprint = sprintRepository.findById(request.getSprintId())
+                                        .orElseThrow(() -> new ResourceNotFoundException(
+                                                        "Sprint not found: " + request.getSprintId()));
+
+                        if (!sprint.getProject().getId().equals(project.getId())) {
+                                throw new BadRequestException(
+                                                "Sprint does not belong to this project");
+                        }
+                }
+
+                // Resolve assignee if provided
+                User assignee = null;
+                if (request.getAssigneeId() != null) {
+                        assignee = getUserById(request.getAssigneeId());
+                }
+
+                task.setTitle(request.getTitle());
+                task.setDescription(request.getDescription());
+                task.setPriority(request.getPriority());
+                task.setType(request.getType());
+                task.setSprint(sprint);
+                task.setAssignee(assignee);
+                task.setStoryPoints(request.getStoryPoints());
+
+                Task updated = taskRepository.save(task);
+                taskRepository.flush(); // ← add this line
+
+                activityLogService.log(
+                                updated,
+                                getUserById(currentUser.getId()),
+                                "TASK_UPDATED",
+                                currentUser.getEmail() + " updated task " + updated.getTaskKey());
+
+                User actor = getUserById(currentUser.getId());
+                // Check if assignee changed and use TASK_ASSIGNED type
+                NotificationType notifType = request.getAssigneeId() != null
+                                ? NotificationType.TASK_ASSIGNED
+                                : NotificationType.TASK_UPDATED;
+
+                publishNotificationEvent(
+                                updated,
+                                actor,
+                                notifType,
+                                actor.getFullName() + (notifType == NotificationType.TASK_ASSIGNED
+                                                ? " assigned you to " + updated.getTaskKey()
+                                                : " updated task " + updated.getTaskKey()),
+                                null);
+                log.info("Task '{}' updated by '{}'",
+                                updated.getTaskKey(), currentUser.getEmail());
+
+                return TaskResponse.from(updated);
         }
 
-        task.setTitle(request.getTitle());
-        task.setDescription(request.getDescription());
-        task.setPriority(request.getPriority());
-        task.setType(request.getType());
-        task.setSprint(sprint);
-        task.setAssignee(assignee);
-        task.setStoryPoints(request.getStoryPoints());
+        // ─── Delete ─────────────────────────────────────────────────────────────
 
-        Task updated = taskRepository.save(task);
-        taskRepository.flush(); // ← add this line
+        @RequiresWorkspaceRole(WorkspaceRole.MANAGER)
+        @Override
+        @Transactional
+        public void deleteTask(UserDetailsImpl currentUser,
+                        UUID projectId,
+                        UUID taskId) {
 
+                Project project = getProjectById(projectId);
 
-        activityLogService.log(
-        updated,
-        getUserById(currentUser.getId()),
-        "TASK_UPDATED",
-        currentUser.getEmail() + " updated task " + updated.getTaskKey());
+                // Only ADMIN or MANAGER can delete tasks
 
-       User actor = getUserById(currentUser.getId());
-// Check if assignee changed and use TASK_ASSIGNED type
-NotificationType notifType = request.getAssigneeId() != null 
-        ? NotificationType.TASK_ASSIGNED 
-        : NotificationType.TASK_UPDATED;
+                Task task = getTaskByIdAndProject(taskId, project);
 
-publishNotificationEvent(
-        updated,
-        actor,
-        notifType,
-        actor.getFullName() + (notifType == NotificationType.TASK_ASSIGNED 
-                ? " assigned you to " + updated.getTaskKey()
-                : " updated task " + updated.getTaskKey()),
-        null);
-        log.info("Task '{}' updated by '{}'",
-                updated.getTaskKey(), currentUser.getEmail());
+                activityLogService.log(
+                                task,
+                                getUserById(currentUser.getId()),
+                                "TASK_DELETED",
+                                currentUser.getEmail() + " deleted task " + task.getTaskKey());
 
-        return TaskResponse.from(updated);
-    }
+                taskRepository.delete(task);
 
-    // ─── Delete ─────────────────────────────────────────────────────────────
+                log.info("Task '{}' deleted by '{}'",
+                                task.getTaskKey(), currentUser.getEmail());
+        }
 
-    @RequiresWorkspaceRole(WorkspaceRole.MANAGER) 
-    @Override
-    @Transactional
-    public void deleteTask(UserDetailsImpl currentUser,
-                           UUID projectId,
-                           UUID taskId) {
+        // ─── Status Transition ──────────────────────────────────────────────────
 
-        Project project = getProjectById(projectId);
+        @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER)
+        @Override
+        @Transactional
+        public TaskResponse updateTaskStatus(UserDetailsImpl currentUser,
+                        UUID projectId,
+                        UUID taskId,
+                        TaskStatus newStatus) {
 
-        // Only ADMIN or MANAGER can delete tasks
+                Project project = getProjectById(projectId);
 
-        Task task = getTaskByIdAndProject(taskId, project);
+                Task task = getTaskByIdAndProject(taskId, project);
 
-        taskRepository.delete(task);
+                // Validate status transition is legal
+                validateStatusTransition(task.getStatus(), newStatus);
 
-        activityLogService.log(
-        task,
-        getUserById(currentUser.getId()),
-        "TASK_DELETED",
-        currentUser.getEmail() + " deleted task " + task.getTaskKey());
+                TaskStatus oldStatus = task.getStatus();
 
-        log.info("Task '{}' deleted by '{}'",
-                task.getTaskKey(), currentUser.getEmail());
-    }
+                task.setStatus(newStatus);
+                Task updated = taskRepository.save(task);
+                taskRepository.flush(); // ← add this line
 
-    // ─── Status Transition ──────────────────────────────────────────────────
+                activityLogService.log(
+                                updated,
+                                getUserById(currentUser.getId()),
+                                "STATUS_CHANGED",
+                                currentUser.getEmail() + " changed status of " + task.getTaskKey()
+                                                + " from " + oldStatus + " to " + newStatus,
+                                oldStatus.name(),
+                                newStatus.name());
 
-    @RequiresWorkspaceRole(WorkspaceRole.DEVELOPER) 
-    @Override
-    @Transactional
-    public TaskResponse updateTaskStatus(UserDetailsImpl currentUser,
-                                         UUID projectId,
-                                         UUID taskId,
-                                         TaskStatus newStatus) {
+                User actor = getUserById(currentUser.getId());
+                publishNotificationEvent(
+                                updated,
+                                actor,
+                                NotificationType.TASK_UPDATED,
+                                actor.getFullName() + " changed status of " + task.getTaskKey()
+                                                + " from " + oldStatus + " to " + newStatus,
+                                newStatus.name());
 
-        Project project = getProjectById(projectId);
+                log.info("Task '{}' status changed from '{}' to '{}' by '{}'",
+                                task.getTaskKey(), task.getStatus(),
+                                newStatus, currentUser.getEmail());
 
-        Task task = getTaskByIdAndProject(taskId, project);
-
-        // Validate status transition is legal
-        validateStatusTransition(task.getStatus(), newStatus);
-
-
-        TaskStatus oldStatus = task.getStatus();
-
-        task.setStatus(newStatus);
-        Task updated = taskRepository.save(task);
-        taskRepository.flush(); // ← add this line
-
-
-        activityLogService.log(
-        updated,
-        getUserById(currentUser.getId()),
-        "STATUS_CHANGED",
-        currentUser.getEmail() + " changed status of " + task.getTaskKey()
-                + " from " + oldStatus + " to " + newStatus,
-        oldStatus.name(),
-        newStatus.name());
-
-        activityLogService.log(
-        updated,
-        getUserById(currentUser.getId()),
-        "STATUS_CHANGED",
-        currentUser.getEmail() + " changed status of " + task.getTaskKey()
-                + " from " + task.getStatus() + " to " + newStatus,
-        task.getStatus().name(),
-        newStatus.name());
-
-     User actor = getUserById(currentUser.getId());
-publishNotificationEvent(
-        updated,
-        actor,
-        NotificationType.TASK_UPDATED,
-        actor.getFullName() + " changed status of " + task.getTaskKey()
-                + " from " + oldStatus + " to " + newStatus,
-        newStatus.name());
-
-        log.info("Task '{}' status changed from '{}' to '{}' by '{}'",
-                task.getTaskKey(), task.getStatus(),
-                newStatus, currentUser.getEmail());
-
-        return TaskResponse.from(updated);
-    }
+                return TaskResponse.from(updated);
+        }
         // helpers
 
+        private Project getProjectById(UUID projectId) {
+                return projectRepository.findById(projectId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Project not found : " + projectId));
 
-
-    private Project getProjectById(UUID projectId){
-        return projectRepository.findById(projectId)
-                                .orElseThrow(()->new ResourceNotFoundException("Project not found : "+ projectId));
-
-    }
-
-    private Task getTaskByIdAndProject(UUID taskId, Project project){
-        Task task = taskRepository.findById(taskId)
-                            .orElseThrow(()-> new ResourceNotFoundException("Task not found: "+ taskId));
-
-        if(!task.getProject().getId().equals(project.getId())){
-            throw new ResourceNotFoundException("Taask not found in this project");
         }
 
-        return task;
-    }
+        private Task getTaskByIdAndProject(UUID taskId, Project project) {
+                Task task = taskRepository.findById(taskId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
 
-    private User getUserById(UUID userId){
-        return userRepository.findById(userId)
-                            .orElseThrow(()-> new ResourceNotFoundException("User not found: " + userId));
-    }
+                if (!task.getProject().getId().equals(project.getId())) {
+                        throw new ResourceNotFoundException("Taask not found in this project");
+                }
 
-    private void validateStatusTransition(TaskStatus current,
-                                          TaskStatus next) {
-        boolean valid = switch (current) {
-            case TODO -> next == TaskStatus.IN_PROGRESS
-                    || next == TaskStatus.CANCELLED;
-            case IN_PROGRESS -> next == TaskStatus.IN_REVIEW
-                    || next == TaskStatus.TODO
-                    || next == TaskStatus.CANCELLED;
-            case IN_REVIEW -> next == TaskStatus.DONE
-                    || next == TaskStatus.IN_PROGRESS
-                    || next == TaskStatus.CANCELLED;
-            case DONE, CANCELLED -> false;
-        };
-
-        if (!valid) {
-            throw new BadRequestException(
-                    "Invalid status transition: "
-                    + current + " → " + next);
+                return task;
         }
-    }
 
-    private void publishNotificationEvent(Task task,
-                                       User actor,
-                                       NotificationType type,
-                                       String message,
-                                       String payload) {
-    try {
-       NotificationEvent event = NotificationEvent.builder()
-        .type(type)
-        .message(message)
-        .taskId(task.getId())
-        .taskKey(task.getTaskKey())
-        .taskTitle(task.getTitle())
-        .projectId(task.getProject().getId())
-        .workspaceId(task.getProject().getWorkspace().getId())
-        .actorId(actor.getId())
-        .actorName(actor.getFullName())
-        .timestamp(java.time.LocalDateTime.now())
-        .payload(payload)
-        .recipientIds(task.getAssignee() != null 
-                ? java.util.List.of(task.getAssignee().getId()) 
-                : java.util.List.of())
-        .build();
+        private User getUserById(UUID userId) {
+                return userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        }
 
-        rabbitTemplate.convertAndSend(
-                RabbitMQConfig.NOTIFICATION_EXCHANGE,
-                RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
-                event);
+        private void validateStatusTransition(TaskStatus current,
+                        TaskStatus next) {
+                boolean valid = switch (current) {
+                        case TODO -> next == TaskStatus.IN_PROGRESS
+                                        || next == TaskStatus.CANCELLED;
+                        case IN_PROGRESS -> next == TaskStatus.IN_REVIEW
+                                        || next == TaskStatus.TODO
+                                        || next == TaskStatus.CANCELLED;
+                        case IN_REVIEW -> next == TaskStatus.DONE
+                                        || next == TaskStatus.IN_PROGRESS
+                                        || next == TaskStatus.CANCELLED;
+                        case DONE, CANCELLED -> false;
+                };
 
-        log.debug("Notification event published for task '{}' type '{}'",
-                task.getTaskKey(), type);
+                if (!valid) {
+                        throw new BadRequestException(
+                                        "Invalid status transition: "
+                                                        + current + " → " + next);
+                }
+        }
 
-    } catch (Exception e) {
-        log.error("Failed to publish notification event " +
-                "for task '{}': {}", task.getTaskKey(), e.getMessage());
-    }
-}
+        private void publishNotificationEvent(Task task,
+                        User actor,
+                        NotificationType type,
+                        String message,
+                        String payload) {
+                try {
+                        NotificationEvent event = NotificationEvent.builder()
+                                        .type(type)
+                                        .message(message)
+                                        .taskId(task.getId())
+                                        .taskKey(task.getTaskKey())
+                                        .taskTitle(task.getTitle())
+                                        .projectId(task.getProject().getId())
+                                        .workspaceId(task.getProject().getWorkspace().getId())
+                                        .actorId(actor.getId())
+                                        .actorName(actor.getFullName())
+                                        .timestamp(java.time.LocalDateTime.now())
+                                        .payload(payload)
+                                        .recipientIds(task.getAssignee() != null
+                                                        ? java.util.List.of(task.getAssignee().getId())
+                                                        : java.util.List.of())
+                                        .build();
 
-   
+                        rabbitTemplate.convertAndSend(
+                                        RabbitMQConfig.NOTIFICATION_EXCHANGE,
+                                        RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
+                                        event);
 
+                        log.debug("Notification event published for task '{}' type '{}'",
+                                        task.getTaskKey(), type);
+
+                } catch (Exception e) {
+                        log.error("Failed to publish notification event " +
+                                        "for task '{}': {}", task.getTaskKey(), e.getMessage());
+                }
+        }
 
 }
