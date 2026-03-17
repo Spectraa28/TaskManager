@@ -21,6 +21,7 @@
 | Resource | URL |
 |---|---|
 | 🚀 Frontend | `https://task-flow-frontend-sandy.vercel.app/` |
+| Swagger docs | `https://taskflow-backend-6f6y.onrender.com/swagger-ui/index.html` |
 
 
 ---
