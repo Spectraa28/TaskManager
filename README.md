@@ -20,8 +20,8 @@
 
 | Resource | URL |
 |---|---|
-| 🚀 API Base | `https://taskmanager-44v4.onrender.com` |
-| 📖 Swagger UI |  |
+| 🚀 Frontend | `https://task-flow-frontend-sandy.vercel.app/` |
+
 
 ---
 
