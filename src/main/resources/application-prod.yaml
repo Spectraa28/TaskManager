@@ -63,6 +63,12 @@ management:
   endpoint:
     health:
       show-details: never
+      mail:
+        enabled: false
+      redis:
+        enabled: false
+      rabbit:
+        enabled: false      
       status:
         http-mapping:
           DOWN: 200
