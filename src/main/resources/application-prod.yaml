@@ -63,14 +63,15 @@ management:
   endpoint:
     health:
       show-details: never
-      mail:
-        enabled: false
-      redis:
-        enabled: false
-      rabbit:
-        enabled: false      
       status:
         http-mapping:
           DOWN: 200
           OUT_OF_SERVICE: 200
           UNKNOWN: 200
+  health:
+    mail:
+      enabled: false
+    redis:
+      enabled: false
+    rabbit:
+      enabled: false
